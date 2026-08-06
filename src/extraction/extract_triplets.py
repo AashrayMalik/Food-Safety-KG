@@ -59,6 +59,8 @@ DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-v4-flash"
 DEFAULT_CONCURRENCY = 10
 DEFAULT_TIMEOUT = 120  # seconds per request
+DEFAULT_API_MAX_TOKENS = 768
+DEFAULT_API_TEMPERATURE = 0.0
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 2.0  # seconds, doubles each retry
 MAX_CONTEXT_CHUNKS_PREV = 2  # previous chunks for continuity
@@ -78,562 +80,38 @@ except ImportError:
     pass
 
 DEFAULT_BACKEND = "openai_compat"
-DEFAULT_HF_MAX_NEW_TOKENS = 4096
+DEFAULT_HF_MAX_NEW_TOKENS = 2048
 DEFAULT_HF_TEMPERATURE = 0.0
 DEFAULT_HF_QUANTIZE = "none"
 DEFAULT_HF_PROMPT_FORMAT = "standard"
 DEFAULT_HF_TRUST_REMOTE_CODE = False
 
 # ---------------------------------------------------------------------------
-# Schema — used to validate every triplet the model returns.
+# Schema — loaded from JSON config (shared with schema_violator.py).
 # Synced with src/schema_v5.md.  Names are canonicalised to their unprefixed
 # form (e.g. "fflo:Adulterant" → "Adulterant") so the validator tolerates
 # both prefixed and unprefixed model output.
 # ---------------------------------------------------------------------------
 
-# Map namespace prefixes → nothing for canonicalisation
-_PREFIX_RE = re.compile(r"^(fflo|fkg|fso|prov|lkif|ssn):")
-
-def _canonical(name: str) -> str:
-    """Strip known namespace prefixes for fuzzy matching."""
-    return _PREFIX_RE.sub("", name.strip())
-
-
-VALID_ENTITY_TYPES = frozenset(_canonical(t) for t in [
-    # ACT stage
-    "fflo:FoodBusinessOperator", "fflo:AdulterationAct",
-    "fflo:Adulterant", "fflo:SyntheticAdulterant", "fflo:NaturalAdulterant",
-    "fflo:ContaminantAdulterant", "fflo:AdulterationMethod",
-    "fflo:FraudType", "fflo:IntentionalityLevel",
-    "fkg:Food", "fkg:Ingredient", "fkg:ChemicalIngredient",
-    "fflo:FoodAdditive",
-    # ACT stage — AdditiveFunction vocabulary
-    "fflo:AdditiveFunction",
-    "fflo:Preservative", "fflo:Antioxidant", "fflo:Emulsifier",
-    "fflo:Stabilizer", "fflo:AcidityRegulator",
-    "fflo:FlourTreatmentAgent", "fflo:Sequestrant",
-    "fflo:HumectantAdditive", "fflo:Colourant", "fflo:SweeteningAgent",
-    # SPREAD stage
-    "fflo:SupplyChainStep",
-    "fflo:Production", "fflo:Processing", "fflo:Storage",
-    "fflo:Distribution", "fflo:Retail", "fflo:Import",
-    "fflo:SpreadEvent", "fflo:TransformationEvent",
-    "fflo:GeographicRegion",
-    # DETECTION stage — FSO/SOSA
-    "fso:Sample", "fso:SampleType", "fso:Analysis", "fso:AnalysisResult",
-    "ssn:Property",
-    "fso:Measurement", "fso:UnitOfMeasure", "fso:Laboratory", "fso:Location",
-    # DETECTION stage — FFLO Incident
-    "fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-    "fflo:SurveyAggregated", "fflo:RecallTriggered",
-    "fflo:EvidenceSource",
-    # DETECTION stage — FFLO Methods
-    "fflo:DetectionMethod", "fflo:LaboratoryTest",
-    "fflo:FieldTest", "fflo:SensoryTest",
-    "fflo:DetectionIndicator", "fflo:DetectionKit",
-    # REGULATION stage — LKIF
-    "fflo:FoodStandard", "fflo:RegulatoryDocument",
-    "fflo:RegulatoryBody", "fflo:RegulatoryAction",
-    "fflo:PermissibleLimit", "fflo:Violation",
-    # REGULATION stage — FFLO
-    "fflo:FoodCategory", "fflo:TableReference",
-    # HEALTH stage — OAE
-    "fflo:HealthEffect", "fflo:CausalHealthEffect",
-    "fflo:AcuteEffect", "fflo:ChronicEffect",
-    "fflo:VulnerablePopulation",
-])
-
-
-VALID_RELATIONS = frozenset(_canonical(r) for r in [
-    # ACT stage — PROV-O
-    "prov:wasAssociatedWith", "prov:used",
-    "prov:wasGeneratedBy", "prov:wasAttributedTo",
-    # ACT stage — FFLO
-    "fflo:hasAdulterant", "fflo:hasAdulterationMethod",
-    "fflo:hasFraudType", "fflo:hasIntentionality",
-    "fflo:isSubstituteFor", "fflo:commonIn", "fflo:foundAt",
-    # ACT stage — FFLO v2 additions
-    "fflo:hasFunction", "fkg:hasIngredient",
-    # SPREAD stage — PROV-O
-    "prov:wasInfluencedBy",
-    # SPREAD stage — FFLO
-    "fflo:propagatesTo", "fflo:carriedBy", "fflo:occursAt",
-    "fflo:inputTo", "fflo:outputOf",
-    # DETECTION stage — FSO
-    "fso:isPerformedOn", "fso:isPerformedAt", "fso:isResultOf",
-    "fso:relatesToProperty", "fso:isMeasuredIn",
-    "fso:hasSampleType", "fso:hasLocation",
-    # DETECTION stage — FFLO v2 additions
-    "fflo:hasNumericValue",
-    # DETECTION stage — FFLO Incident
-    "fflo:identifies", "fflo:foundIn", "fflo:producedBy",
-    "fflo:confirmedBy", "fflo:supportedBy",
-    "fflo:foundAtStep", "fflo:inRegion", "fflo:triggeredAction",
-    "fflo:collectedAt",
-    # DETECTION stage — FFLO Methods
-    "fflo:detectedBy", "fflo:producesIndicator",
-    "fflo:requiresKit", "fflo:isPerformedAs",
-    # REGULATION stage — LKIF
-    "lkif:created_by",
-    # REGULATION stage — FFLO bridges
-    "fflo:belongsToCategory", "fflo:appliesToCategory",
-    "fflo:hasValue", "fflo:forProperty", "fflo:comparedAgainst",
-    # REGULATION stage — FFLO structure
-    "fflo:definedIn", "fflo:appliesTo", "fflo:inFood",
-    "fflo:specifiedIn", "fflo:issuedBy", "fflo:targets",
-    "fflo:citesFinding", "fflo:constitutes", "fflo:violates",
-    # REGULATION stage — FFLO v2 additions
-    "fflo:defines", "fflo:hasPermissibleLimit",
-    "fflo:appliesToFood", "fflo:compliesWith",
-    "fflo:amends", "fflo:hasSubcategory",
-    "fflo:hasDefinition", "fflo:tableLabel",
-    # HEALTH stage — FFLO
-    "fflo:causesEffect", "fflo:affectsPopulation",
-    "fflo:hasEffectType", "fflo:associatedWith",
-])
-
-
-# relation canonical-name → list of (valid_domain, valid_range) pairs.
-# Multiple pairs per relation allowed (e.g. prov:wasGeneratedBy has two).
-# Empty frozenset = skip check (open-ended).
-_D = RELATION_DOMAIN_RANGE = {}
-
-def _dr(rel: str, *pairs: tuple[frozenset[str], frozenset[str]]) -> None:
-    _D[_canonical(rel)] = [(frozenset(_canonical(e) for e in d),
-                            frozenset(_canonical(e) for e in r))
-                           for d, r in pairs]
-
-# -- ACT stage --
-_dr("prov:wasAssociatedWith",
-    ({"fflo:AdulterationAct"}, {"fflo:FoodBusinessOperator"}))
-_dr("prov:used",
-    ({"fflo:AdulterationAct"}, {"fkg:Food"}))
-_dr("prov:wasGeneratedBy",
-    ({"fflo:Adulterant"}, {"fflo:AdulterationAct"}),
-    ({"fflo:SpreadEvent"}, {"fflo:TransformationEvent"}))
-_dr("prov:wasAttributedTo",
-    ({"fflo:IncidentFinding"}, {"fflo:FoodBusinessOperator"}))
-_dr("fflo:hasAdulterant",
-    ({"fkg:Food"}, {"fflo:Adulterant", "fflo:SyntheticAdulterant",
-                     "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"}))
-_dr("fflo:hasAdulterationMethod",
-    ({"fkg:Food"}, {"fflo:AdulterationMethod"}))
-_dr("fflo:hasFraudType",
-    ({"fflo:AdulterationMethod"}, {"fflo:FraudType"}))
-_dr("fflo:hasIntentionality",
-    ({"fflo:AdulterationMethod"}, {"fflo:IntentionalityLevel"}))
-_dr("fflo:isSubstituteFor",
-    ({"fflo:Adulterant", "fflo:SyntheticAdulterant",
-      "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"}, {"fkg:Food"}))
-_dr("fflo:commonIn",
-    ({"fflo:Adulterant", "fflo:SyntheticAdulterant",
-      "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"},
-     {"fflo:GeographicRegion"}))
-_dr("fflo:foundAt",
-    ({"fflo:Adulterant", "fflo:SyntheticAdulterant",
-      "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"},
-     {"fflo:SupplyChainStep", "fflo:Production", "fflo:Processing",
-      "fflo:Storage", "fflo:Distribution", "fflo:Retail", "fflo:Import"}))
-
-# -- ACT stage v2 additions --
-_dr("fflo:hasFunction",
-    ({"fflo:FoodAdditive"},
-     {"fflo:AdditiveFunction", "fflo:Preservative", "fflo:Antioxidant",
-      "fflo:Emulsifier", "fflo:Stabilizer", "fflo:AcidityRegulator",
-      "fflo:FlourTreatmentAgent", "fflo:Sequestrant",
-      "fflo:HumectantAdditive", "fflo:Colourant", "fflo:SweeteningAgent"}))
-_dr("fkg:hasIngredient",
-    ({"fkg:Food"}, {"fkg:Ingredient"}))
-
-# -- SPREAD stage --
-_dr("prov:wasInfluencedBy",
-    ({"fflo:SpreadEvent"}, {"fflo:AdulterationAct"}))
-_dr("fflo:propagatesTo",
-    ({"fflo:SupplyChainStep", "fflo:Production", "fflo:Processing",
-      "fflo:Storage", "fflo:Distribution", "fflo:Retail", "fflo:Import"},
-     {"fflo:SupplyChainStep", "fflo:Production", "fflo:Processing",
-      "fflo:Storage", "fflo:Distribution", "fflo:Retail", "fflo:Import"}))
-_dr("fflo:carriedBy",
-    ({"fflo:SpreadEvent"}, {"fkg:Food"}))
-_dr("fflo:occursAt",
-    ({"fflo:SpreadEvent"}, {"fflo:SupplyChainStep", "fflo:Production",
-      "fflo:Processing", "fflo:Storage", "fflo:Distribution",
-      "fflo:Retail", "fflo:Import"}))
-_dr("fflo:inputTo",
-    ({"fkg:Food"}, {"fflo:TransformationEvent"}))
-_dr("fflo:outputOf",
-    ({"fkg:Food"}, {"fflo:TransformationEvent"}))
-
-# -- DETECTION stage --
-_dr("fso:isPerformedOn",
-    ({"fso:Analysis"}, {"fso:Sample"}))
-_dr("fso:isPerformedAt",
-    ({"fso:Analysis"}, {"fso:Laboratory"}))
-_dr("fso:isResultOf",
-    ({"fso:AnalysisResult"}, {"fso:Analysis"}))
-_dr("fso:relatesToProperty",
-    ({"fso:AnalysisResult"}, {"ssn:Property"}))
-_dr("fso:isMeasuredIn",
-    ({"fso:Measurement"}, {"fso:UnitOfMeasure"}))
-_dr("fso:hasSampleType",
-    ({"fso:Sample"}, {"fso:SampleType"}))
-_dr("fso:hasLocation",
-    ({"fso:Sample"}, {"fso:Location"}))
-
-# -- DETECTION v2 additions --
-_dr("fflo:hasNumericValue",
-    ({"fso:Measurement"}, frozenset()))  # xsd:decimal, open-ended
-
-_dr("fflo:identifies",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"},
-     {"fflo:Adulterant", "fflo:SyntheticAdulterant",
-      "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"}))
-_dr("fflo:foundIn",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"}, {"fkg:Food"}))
-_dr("fflo:producedBy",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"},
-     {"fflo:DetectionMethod", "fflo:LaboratoryTest",
-      "fflo:FieldTest", "fflo:SensoryTest"}))
-_dr("fflo:confirmedBy",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed"}, {"fso:AnalysisResult"}))
-_dr("fflo:supportedBy",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"},
-     {"fflo:EvidenceSource"}))
-_dr("fflo:foundAtStep",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"},
-     {"fflo:SupplyChainStep", "fflo:Production", "fflo:Processing",
-      "fflo:Storage", "fflo:Distribution", "fflo:Retail", "fflo:Import"}))
-_dr("fflo:inRegion",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"},
-     {"fflo:GeographicRegion"}))
-_dr("fflo:triggeredAction",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"},
-     {"fflo:RegulatoryAction"}))
-_dr("fflo:collectedAt",
-    ({"fso:Sample"}, {"fflo:SupplyChainStep", "fflo:Production",
-      "fflo:Processing", "fflo:Storage", "fflo:Distribution",
-      "fflo:Retail", "fflo:Import"}))
-_dr("fflo:detectedBy",
-    ({"fflo:Adulterant", "fflo:SyntheticAdulterant",
-      "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"},
-     {"fflo:DetectionMethod", "fflo:LaboratoryTest",
-      "fflo:FieldTest", "fflo:SensoryTest"}))
-_dr("fflo:producesIndicator",
-    ({"fflo:DetectionMethod", "fflo:LaboratoryTest",
-      "fflo:FieldTest", "fflo:SensoryTest"}, {"fflo:DetectionIndicator"}))
-_dr("fflo:requiresKit",
-    ({"fflo:DetectionMethod", "fflo:LaboratoryTest",
-      "fflo:FieldTest", "fflo:SensoryTest"}, {"fflo:DetectionKit"}))
-_dr("fflo:isPerformedAs",
-    ({"fflo:LaboratoryTest"}, {"fso:Analysis"}))
-
-# -- REGULATION stage --
-_dr("lkif:created_by",
-    ({"fflo:FoodStandard"}, {"fflo:RegulatoryBody"}))
-_dr("fflo:belongsToCategory",
-    ({"fkg:Food"}, {"fflo:FoodCategory"}))
-_dr("fflo:appliesToCategory",
-    ({"fflo:FoodStandard"}, {"fflo:FoodCategory"}))
-_dr("fflo:hasValue",
-    ({"fflo:PermissibleLimit"}, {"fso:Measurement"}))
-_dr("fflo:forProperty",
-    ({"fflo:PermissibleLimit"}, {"ssn:Property"}))
-_dr("fflo:comparedAgainst",
-    ({"fso:AnalysisResult"}, {"fflo:PermissibleLimit"}))
-_dr("fflo:definedIn",
-    ({"fflo:FoodStandard"}, {"fflo:RegulatoryDocument"}))
-_dr("fflo:appliesTo",
-    ({"fflo:PermissibleLimit"}, {"fflo:Adulterant",
-      "fflo:SyntheticAdulterant", "fflo:NaturalAdulterant",
-      "fflo:ContaminantAdulterant"}))
-_dr("fflo:inFood",
-    ({"fflo:PermissibleLimit"}, {"fkg:Food"}))
-_dr("fflo:specifiedIn",
-    ({"fflo:PermissibleLimit"}, {"fflo:FoodStandard", "fflo:TableReference"}))
-
-# -- REGULATION v2 additions --
-_dr("fflo:defines",
-    ({"fflo:RegulatoryDocument"}, {"fflo:FoodCategory", "fflo:FoodStandard"}))
-_dr("fflo:hasPermissibleLimit",
-    ({"fkg:Food", "fkg:Ingredient"}, {"fflo:PermissibleLimit"}))
-_dr("fflo:appliesToFood",
-    ({"fflo:FoodStandard", "fflo:RegulatoryDocument"}, {"fkg:Food"}))
-_dr("fflo:compliesWith",
-    ({"fflo:FoodBusinessOperator", "fkg:Food"},
-     {"fflo:FoodStandard", "fflo:RegulatoryDocument"}))
-_dr("fflo:amends",
-    ({"fflo:RegulatoryDocument"}, {"fflo:RegulatoryDocument"}))
-_dr("fflo:hasSubcategory",
-    ({"fflo:FoodCategory"}, {"fflo:FoodCategory"}))
-_dr("fflo:hasDefinition",
-    ({"fflo:FoodCategory", "fflo:Adulterant", "fflo:SyntheticAdulterant",
-      "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"}, frozenset()))
-_dr("fflo:tableLabel",
-    ({"fflo:TableReference"}, frozenset()))  # xsd:string, open-ended
-_dr("fflo:issuedBy",
-    ({"fflo:RegulatoryAction"}, {"fflo:RegulatoryBody"}))
-_dr("fflo:targets",
-    ({"fflo:RegulatoryAction"}, {"fkg:Food"}))
-_dr("fflo:citesFinding",
-    ({"fflo:RegulatoryAction"}, {"fflo:IncidentFinding",
-      "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"}))
-_dr("fflo:constitutes",
-    ({"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"},
-     {"fflo:Violation"}))
-_dr("fflo:violates",
-    ({"fflo:Violation"}, {"fflo:PermissibleLimit"}))
-
-# -- HEALTH stage --
-_dr("fflo:causesEffect",
-    ({"fflo:Adulterant", "fflo:SyntheticAdulterant",
-      "fflo:NaturalAdulterant", "fflo:ContaminantAdulterant"},
-     {"fflo:HealthEffect", "fflo:CausalHealthEffect",
-      "fflo:AcuteEffect", "fflo:ChronicEffect"}))
-_dr("fflo:affectsPopulation",
-    ({"fflo:HealthEffect", "fflo:CausalHealthEffect",
-      "fflo:AcuteEffect", "fflo:ChronicEffect"},
-     {"fflo:VulnerablePopulation"}))
-_dr("fflo:hasEffectType",
-    ({"fflo:HealthEffect", "fflo:CausalHealthEffect"},
-     {"fflo:AcuteEffect", "fflo:ChronicEffect"}))
-_dr("fflo:associatedWith",
-    ({"fflo:HealthEffect", "fflo:CausalHealthEffect",
-      "fflo:AcuteEffect", "fflo:ChronicEffect"},
-     {"fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-      "fflo:SurveyAggregated", "fflo:RecallTriggered"}))
-
-# Clean up helper
-del _dr
-
-REQUIRED_TRIPLET_FIELDS = (
-    "subject", "subject_type", "predicate", "object", "object_type",
-    "confidence", "evidence_span",
+from schema_validator import (  # noqa: E402
+    VALID_ENTITY_TYPES,
+    VALID_RELATIONS,
+    RELATION_DOMAIN_RANGE,
+    REQUIRED_TRIPLET_FIELDS,
+    _TRIPLEX_ENTITY_TYPES_PREFIXED,
+    _TRIPLEX_RELATIONS_PREFIXED,
+    _CANONICAL_TO_PREFIXED_ENTITY,
+    _CANONICAL_TO_PREFIXED_RELATION,
+    validate_triplet,
+    _canonical,
 )
 
 # ---------------------------------------------------------------------------
-# Triplex prompt helpers — entity types & relations for the Triplex
-# knowledge-graph model.  We send *canonical* (unprefixed) names because
-# Triplex outputs ``E0, TYPE: value`` and colons inside names would break
-# parsing.  ``_CANONICAL_TO_PREFIXED_*`` maps canonical names back to the
-# full ontology term after parsing.
+# Triplex prompt helpers are imported above from schema_validator:
+#   _TRIPLEX_ENTITY_TYPES_PREFIXED, _TRIPLEX_RELATIONS_PREFIXED,
+#   _CANONICAL_TO_PREFIXED_ENTITY, _CANONICAL_TO_PREFIXED_RELATION
+# validate_triplet is also imported from schema_validator.
 # ---------------------------------------------------------------------------
-
-_TRIPLEX_ENTITY_TYPES_PREFIXED: list[str] = [
-    # ACT stage
-    "fflo:FoodBusinessOperator", "fflo:AdulterationAct",
-    "fflo:Adulterant", "fflo:SyntheticAdulterant", "fflo:NaturalAdulterant",
-    "fflo:ContaminantAdulterant", "fflo:AdulterationMethod",
-    "fflo:FraudType", "fflo:IntentionalityLevel",
-    "fkg:Food", "fkg:Ingredient", "fkg:ChemicalIngredient",
-    "fflo:FoodAdditive",
-    "fflo:AdditiveFunction",
-    "fflo:Preservative", "fflo:Antioxidant", "fflo:Emulsifier",
-    "fflo:Stabilizer", "fflo:AcidityRegulator",
-    "fflo:FlourTreatmentAgent", "fflo:Sequestrant",
-    "fflo:HumectantAdditive", "fflo:Colourant", "fflo:SweeteningAgent",
-    # SPREAD stage
-    "fflo:SupplyChainStep",
-    "fflo:Production", "fflo:Processing", "fflo:Storage",
-    "fflo:Distribution", "fflo:Retail", "fflo:Import",
-    "fflo:SpreadEvent", "fflo:TransformationEvent",
-    "fflo:GeographicRegion",
-    # DETECTION stage — FSO/SOSA
-    "fso:Sample", "fso:SampleType", "fso:Analysis", "fso:AnalysisResult",
-    "ssn:Property",
-    "fso:Measurement", "fso:UnitOfMeasure", "fso:Laboratory", "fso:Location",
-    # DETECTION stage — FFLO Incident
-    "fflo:IncidentFinding", "fflo:LabConfirmed", "fflo:FieldDetected",
-    "fflo:SurveyAggregated", "fflo:RecallTriggered",
-    "fflo:EvidenceSource",
-    # DETECTION stage — FFLO Methods
-    "fflo:DetectionMethod", "fflo:LaboratoryTest",
-    "fflo:FieldTest", "fflo:SensoryTest",
-    "fflo:DetectionIndicator", "fflo:DetectionKit",
-    # REGULATION stage — LKIF
-    "fflo:FoodStandard", "fflo:RegulatoryDocument",
-    "fflo:RegulatoryBody", "fflo:RegulatoryAction",
-    "fflo:PermissibleLimit", "fflo:Violation",
-    # REGULATION stage — FFLO
-    "fflo:FoodCategory", "fflo:TableReference",
-    # HEALTH stage — OAE
-    "fflo:HealthEffect", "fflo:CausalHealthEffect",
-    "fflo:AcuteEffect", "fflo:ChronicEffect",
-    "fflo:VulnerablePopulation",
-]
-
-_TRIPLEX_RELATIONS_PREFIXED: list[str] = [
-    # ACT stage — PROV-O
-    "prov:wasAssociatedWith", "prov:used",
-    "prov:wasGeneratedBy", "prov:wasAttributedTo",
-    # ACT stage — FFLO
-    "fflo:hasAdulterant", "fflo:hasAdulterationMethod",
-    "fflo:hasFraudType", "fflo:hasIntentionality",
-    "fflo:isSubstituteFor", "fflo:commonIn", "fflo:foundAt",
-    # ACT stage — FFLO v2 additions
-    "fflo:hasFunction", "fkg:hasIngredient",
-    # SPREAD stage — PROV-O
-    "prov:wasInfluencedBy",
-    # SPREAD stage — FFLO
-    "fflo:propagatesTo", "fflo:carriedBy", "fflo:occursAt",
-    "fflo:inputTo", "fflo:outputOf",
-    # DETECTION stage — FSO
-    "fso:isPerformedOn", "fso:isPerformedAt", "fso:isResultOf",
-    "fso:relatesToProperty", "fso:isMeasuredIn",
-    "fso:hasSampleType", "fso:hasLocation",
-    # DETECTION stage — FFLO v2 additions
-    "fflo:hasNumericValue",
-    # DETECTION stage — FFLO Incident
-    "fflo:identifies", "fflo:foundIn", "fflo:producedBy",
-    "fflo:confirmedBy", "fflo:supportedBy",
-    "fflo:foundAtStep", "fflo:inRegion", "fflo:triggeredAction",
-    "fflo:collectedAt",
-    # DETECTION stage — FFLO Methods
-    "fflo:detectedBy", "fflo:producesIndicator",
-    "fflo:requiresKit", "fflo:isPerformedAs",
-    # REGULATION stage — LKIF
-    "lkif:created_by",
-    # REGULATION stage — FFLO bridges
-    "fflo:belongsToCategory", "fflo:appliesToCategory",
-    "fflo:hasValue", "fflo:forProperty", "fflo:comparedAgainst",
-    # REGULATION stage — FFLO structure
-    "fflo:definedIn", "fflo:appliesTo", "fflo:inFood",
-    "fflo:specifiedIn", "fflo:issuedBy", "fflo:targets",
-    "fflo:citesFinding", "fflo:constitutes", "fflo:violates",
-    # REGULATION stage — FFLO v2 additions
-    "fflo:defines", "fflo:hasPermissibleLimit",
-    "fflo:appliesToFood", "fflo:compliesWith",
-    "fflo:amends", "fflo:hasSubcategory",
-    "fflo:hasDefinition", "fflo:tableLabel",
-    # HEALTH stage — FFLO
-    "fflo:causesEffect", "fflo:affectsPopulation",
-    "fflo:hasEffectType", "fflo:associatedWith",
-]
-
-_TRIPLEX_ENTITY_NAMES = [_canonical(n) for n in _TRIPLEX_ENTITY_TYPES_PREFIXED]
-_TRIPLEX_RELATION_NAMES = [_canonical(r)
-                          for r in _TRIPLEX_RELATIONS_PREFIXED]
-
-_CANONICAL_TO_PREFIXED_ENTITY: dict[str, str] = dict(
-    zip(_TRIPLEX_ENTITY_NAMES, _TRIPLEX_ENTITY_TYPES_PREFIXED)
-)
-_CANONICAL_TO_PREFIXED_RELATION: dict[str, str] = dict(
-    zip(_TRIPLEX_RELATION_NAMES, _TRIPLEX_RELATIONS_PREFIXED)
-)
-
-# Keep in sync guard (fires at import time if lists diverge)
-assert set(_TRIPLEX_ENTITY_NAMES) == set(VALID_ENTITY_TYPES), \
-    "Triplex entity types out of sync with VALID_ENTITY_TYPES"
-assert set(_TRIPLEX_RELATION_NAMES) == set(VALID_RELATIONS), \
-    "Triplex relations out of sync with VALID_RELATIONS"
-
-del _TRIPLEX_ENTITY_NAMES, _TRIPLEX_RELATION_NAMES  # only used for the assert
-
-
-def validate_triplet(
-    triplet: dict[str, Any],
-    triplet_index: int,
-    snippet_id: str,
-    source_id: str,
-    source_file: str,
-    chunk_index: str,
-) -> list[dict[str, Any]]:
-    """Validate one triplet against the schema.  Returns a list of violations
-    (empty list = fully valid).
-
-    Entity type and relation names are canonicalised (prefixes stripped) before
-    comparison, so the model may return either "fflo:Adulterant" or "Adulterant".
-    """
-    violations: list[dict[str, Any]] = []
-
-    def _violation(vtype: str, field: str, actual: object, allowed: object | None = None) -> dict[str, Any]:
-        return {
-            "snippet_id": snippet_id,
-            "source_id": source_id,
-            "source_file": source_file,
-            "chunk_index": chunk_index,
-            "triplet_index": triplet_index,
-            "violation_type": vtype,
-            "field_name": field,
-            "actual_value": actual,
-            "allowed_values": sorted(allowed) if isinstance(allowed, (set, frozenset)) else allowed,
-            "triplet": triplet,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }
-
-    # 1. Required fields present and non-empty
-    for field in REQUIRED_TRIPLET_FIELDS:
-        val = triplet.get(field)
-        if val is None or (isinstance(val, str) and not val.strip()):
-            violations.append(_violation("missing_field", field, val))
-            return violations  # can't validate further without core fields
-
-    # 2. Entity types (canonicalised)
-    for role in ("subject_type", "object_type"):
-        etype = _canonical(triplet.get(role, ""))
-        if etype and etype not in VALID_ENTITY_TYPES:
-            violations.append(_violation(
-                "unknown_entity_type", role, triplet.get(role, ""),
-                allowed=sorted(VALID_ENTITY_TYPES),
-            ))
-
-    # 3. Relation (canonicalised)
-    pred_raw = triplet.get("predicate", "")
-    pred = _canonical(pred_raw)
-    if pred and pred not in VALID_RELATIONS:
-        violations.append(_violation(
-            "unknown_relation", "predicate", pred_raw,
-            allowed=sorted(VALID_RELATIONS),
-        ))
-        return violations  # can't check domain/range without a known relation
-
-    # 4. Domain / range (supports multiple valid pairs per relation)
-    pairs = RELATION_DOMAIN_RANGE.get(pred)
-    if pairs:
-        stype = _canonical(triplet.get("subject_type", ""))
-        otype = _canonical(triplet.get("object_type", ""))
-
-        domain_ok = any(
-            (not valid_domain or stype in valid_domain)
-            for valid_domain, _valid_range in pairs
-        )
-        range_ok = any(
-            (not valid_range or otype in valid_range)
-            for _valid_domain, valid_range in pairs
-        )
-
-        if not domain_ok:
-            all_domains = sorted({e for d, _ in pairs for e in d})
-            violations.append(_violation(
-                "domain_mismatch", "subject_type", triplet.get("subject_type", ""),
-                allowed=all_domains,
-            ))
-        if not range_ok:
-            all_ranges = sorted({e for _, r in pairs for e in r})
-            violations.append(_violation(
-                "range_mismatch", "object_type", triplet.get("object_type", ""),
-                allowed=all_ranges,
-            ))
-
-    # 5. Confidence sanity
-    conf = triplet.get("confidence")
-    if conf is not None:
-        try:
-            cf = float(conf)
-            if cf < 0.0 or cf > 1.0:
-                violations.append(_violation("invalid_confidence", "confidence", conf))
-        except (TypeError, ValueError):
-            violations.append(_violation("invalid_confidence", "confidence", conf))
-
-    return violations
 
 
 # ---------------------------------------------------------------------------
@@ -769,6 +247,11 @@ async def call_deepseek(
     user_message: str,
     snippet_id: str,
     timeout: float,
+    max_tokens: int,
+    temperature: float,
+    top_p: float | None,
+    top_k: int | None,
+    disable_thinking: bool,
 ) -> dict[str, Any]:
     """Send one chat-completion request and return parsed JSON."""
     url = f"{base_url.rstrip('/')}/chat/completions"
@@ -782,10 +265,16 @@ async def call_deepseek(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
-        "temperature": 0.0,
-        "max_tokens": 8192,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
         "response_format": {"type": "json_object"},
     }
+    if top_p is not None:
+        payload["top_p"] = top_p
+    if top_k is not None:
+        payload["top_k"] = top_k
+    if disable_thinking:
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
 
     response = await client.post(
         url, json=payload, headers=headers, timeout=httpx.Timeout(timeout)
@@ -1197,6 +686,11 @@ async def process_one(
     rows: list[dict[str, str]],
     idx: int,
     timeout: float,
+    api_max_tokens: int,
+    api_temperature: float,
+    api_top_p: float | None,
+    api_top_k: int | None,
+    disable_thinking: bool,
     output_jsonl: Path,
     failures_jsonl: Path,
     violations_jsonl: Path,
@@ -1246,6 +740,9 @@ async def process_one(
                     result = await call_deepseek(
                         client, base_url, api_key, model,
                         system_prompt, user_msg, snippet_id, timeout,
+                        api_max_tokens,
+                        api_temperature, api_top_p, api_top_k,
+                        disable_thinking,
                     )
 
                 # --- Schema validation ---
@@ -1315,6 +812,11 @@ async def run_pipeline(
     model: str = DEFAULT_MODEL,
     concurrency: int = DEFAULT_CONCURRENCY,
     timeout: float = DEFAULT_TIMEOUT,
+    api_max_tokens: int = DEFAULT_API_MAX_TOKENS,
+    api_temperature: float = DEFAULT_API_TEMPERATURE,
+    api_top_p: float | None = None,
+    api_top_k: int | None = None,
+    disable_thinking: bool = False,
     resume: bool = False,
     retry_failures: bool = False,
     skip_until: str | None = None,
@@ -1326,6 +828,7 @@ async def run_pipeline(
     hf_trust_remote_code: bool = DEFAULT_HF_TRUST_REMOTE_CODE,
     hf_max_new_tokens: int = DEFAULT_HF_MAX_NEW_TOKENS,
     hf_temperature: float = DEFAULT_HF_TEMPERATURE,
+    schema_file: Path | None = None,
 ) -> int:
     """Main async pipeline.
 
@@ -1336,6 +839,24 @@ async def run_pipeline(
     """
     if csv_id is None:
         csv_id = _derive_csv_id(chunks_csv)
+
+    # Reload schema from custom file if provided
+    if schema_file is not None:
+        import schema_validator
+        sv = schema_validator.SchemaValidator(schema_file)
+        schema_validator.VALID_ENTITY_TYPES = sv.entity_types
+        schema_validator.VALID_RELATIONS = sv.relations
+        schema_validator.RELATION_DOMAIN_RANGE = sv.domain_range
+        schema_validator.REQUIRED_TRIPLET_FIELDS = sv.required_triplet_fields
+        schema_validator.validate_triplet = sv.validate_triplet
+        schema_validator._TRIPLEX_ENTITY_TYPES_PREFIXED = sv.entity_types_prefixed
+        schema_validator._TRIPLEX_RELATIONS_PREFIXED = sv.relations_prefixed
+        schema_validator._CANONICAL_TO_PREFIXED_ENTITY = sv.entity_canonical_to_prefixed
+        schema_validator._CANONICAL_TO_PREFIXED_RELATION = sv.relation_canonical_to_prefixed
+        print(f"  Schema overridden from {schema_file} "
+              f"({len(sv.entity_types)} entity types, "
+              f"{len(sv.relations)} relations)")
+
     model_slug = _model_slug(model)
     if backend == "hf_transformers":
         run_dir = output_dir / csv_id / f"hf__{model_slug}"
@@ -1418,6 +939,10 @@ async def run_pipeline(
 
     print(f"  Processing {len(pending)} pending chunks "
           f"(resume={resume}, concurrency={concurrency})")
+    if backend == "openai_compat":
+        print(f"  API generation: max_tokens={api_max_tokens}, "
+              f"temperature={api_temperature}, top_p={api_top_p}, "
+              f"top_k={api_top_k}, disable_thinking={disable_thinking}")
 
     # --- Backend-specific setup ---
     resolved_hf_device = "cpu"
@@ -1452,6 +977,8 @@ async def run_pipeline(
             process_one(
                 sem, None, base_url, api_key, model,
                 system_prompt, rows, idx, timeout,
+                api_max_tokens, api_temperature, api_top_p, api_top_k,
+                disable_thinking,
                 output_jsonl, failures_jsonl, violations_jsonl, len(pending),
                 backend=backend,
                 hf_model=hf_model, hf_tokenizer=hf_tokenizer,
@@ -1472,6 +999,8 @@ async def run_pipeline(
                 process_one(
                     sem, client, base_url, api_key, model,
                     system_prompt, rows, idx, timeout,
+                    api_max_tokens, api_temperature, api_top_p, api_top_k,
+                    disable_thinking,
                     output_jsonl, failures_jsonl, violations_jsonl, len(pending),
                 )
                 for idx in pending
@@ -1521,8 +1050,9 @@ def _flatten_to_csv(
 
     fieldnames = [
         "snippet_id", "source_id", "source_file", "source_type",
-        "chunk_index", "subject", "subject_type", "predicate",
-        "object", "object_type", "confidence", "evidence_span",
+        "chunk_index", "subject", "subject_type", "subject_id",
+        "predicate", "object", "object_type", "object_id",
+        "confidence", "evidence_span",
     ]
 
     with out_csv.open("w", encoding="utf-8", newline="") as fh:
@@ -1548,9 +1078,11 @@ def _flatten_to_csv(
                             "chunk_index": src.get("chunk_index", ""),
                             "subject": t.get("subject", ""),
                             "subject_type": t.get("subject_type", ""),
+                            "subject_id": t.get("subject_id", ""),
                             "predicate": t.get("predicate", ""),
                             "object": t.get("object", ""),
                             "object_type": t.get("object_type", ""),
+                            "object_id": t.get("object_id", ""),
                             "confidence": t.get("confidence", ""),
                             "evidence_span": t.get("evidence_span", ""),
                         })
@@ -1618,6 +1150,22 @@ def _parse_args() -> argparse.Namespace:
                    help=f"Max parallel requests (default {DEFAULT_CONCURRENCY})")
     p.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT,
                    help="Per-request timeout in seconds")
+    p.add_argument("--api-max-tokens", "--max-tokens", dest="api_max_tokens",
+                   type=int, default=DEFAULT_API_MAX_TOKENS,
+                   help="Max completion tokens for openai_compat/vLLM "
+                        f"requests (default: {DEFAULT_API_MAX_TOKENS})")
+    p.add_argument("--api-temperature", type=float,
+                   default=DEFAULT_API_TEMPERATURE,
+                   help="Sampling temperature for openai_compat/vLLM "
+                        f"requests (default: {DEFAULT_API_TEMPERATURE})")
+    p.add_argument("--api-top-p", type=float, default=None,
+                   help="Optional top_p for openai_compat/vLLM requests")
+    p.add_argument("--api-top-k", type=int, default=None,
+                   help="Optional top_k for vLLM requests")
+    p.add_argument("--disable-thinking", "--qwen-no-think",
+                   action="store_true",
+                   help="Pass chat_template_kwargs.enable_thinking=false "
+                        "to vLLM/Qwen chat templates")
     p.add_argument("--resume", action="store_true",
                    help="Skip snippet_ids already present in triplets.jsonl")
     p.add_argument("--retry-failures", action="store_true",
@@ -1658,6 +1206,9 @@ def _parse_args() -> argparse.Namespace:
                    default=DEFAULT_HF_TEMPERATURE,
                    help=f"Temperature for HF generation "
                         f"(default: {DEFAULT_HF_TEMPERATURE})")
+    p.add_argument("--schema-file", type=Path, default=None,
+                   help="Path to schema JSON config file "
+                        "(default: schema_config.json alongside this script)")
     return p.parse_args()
 
 
@@ -1689,6 +1240,11 @@ def main() -> None:
         model=args.model,
         concurrency=args.concurrency,
         timeout=args.timeout,
+        api_max_tokens=args.api_max_tokens,
+        api_temperature=args.api_temperature,
+        api_top_p=args.api_top_p,
+        api_top_k=args.api_top_k,
+        disable_thinking=args.disable_thinking,
         resume=args.resume,
         retry_failures=args.retry_failures,
         skip_until=args.skip_until,
@@ -1700,6 +1256,7 @@ def main() -> None:
         hf_trust_remote_code=args.hf_trust_remote_code,
         hf_max_new_tokens=args.hf_max_new_tokens,
         hf_temperature=args.hf_temperature,
+        schema_file=args.schema_file,
     )))
 
 

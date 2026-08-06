@@ -22,52 +22,48 @@ chunks.csv  ──→  build_context()  ──→  LLM call  ──→  validate
 
 ## Schema
 
-The extraction model is given 68 entity types and 67 relations drawn from the
-FFLO (Food Fraud Lifecycle Ontology) v2, spanning five lifecycle stages:
+The extraction model is given 92 entity types and 67 relations drawn from the
+FFLO (Food Fraud Lifecycle Ontology) v7, spanning five lifecycle stages:
 
-| Stage | Example types | Example relations | v2 additions |
+| Stage | Example types | Example relations | v7 additions |
 |---|---|---|---|
-| ACT | Adulterant, FoodAdditive, AdditiveFunction, FraudType | hasAdulterant, hasFunction, hasIngredient, hasFraudType | FoodAdditive, AdditiveFunction, hasFunction, hasIngredient |
+| ACT | Adulterant, FoodAdditive, AdditiveFunction, FraudType | hasAdulterant, hasFunction, hasIngredient, hasFraudType | Microorganism, ProcessingAid, ObligationType (8 subtypes), hasObligation, hasScientificName |
 | SPREAD | SupplyChainStep, SpreadEvent | propagatesTo, occursAt | — |
-| DETECTION | IncidentFinding, DetectionMethod, Sample | identifies, hasNumericValue, foundIn | hasNumericValue |
-| REGULATION | PermissibleLimit, FoodStandard, TableReference | hasValue, appliesTo, defines, compliesWith, amends, hasSubcategory, hasDefinition | defines, compliesWith, amends, hasSubcategory, hasDefinition, hasPermissibleLimit, appliesToFood, tableLabel, TableReference |
+| DETECTION | IncidentFinding, DetectionMethod, Sample | identifies, hasNumericValue, foundIn | SamplingPlan, governsSampling |
+| REGULATION | PermissibleLimit, FoodStandard, TableReference | hasValue, appliesTo, defines, compliesWith, amends, hasSubcategory, hasDefinition | RegulatoryOfficer, RegulatoryActionType (5 subtypes), isEmpoweredTo, actsOnBehalfOf |
 | HEALTH | HealthEffect, VulnerablePopulation | causesEffect, affectsPopulation | — |
 
-The schema is defined in `src/schema_iterations/schema_v2.md`.  The system prompt
-(`prompts/triplet_extraction.txt`) is kept in sync with this file.
+The schema is defined in `src/schema_iterations/schema_v3.md` (canonical spec).
+The runtime validation rules are loaded from **`src/extraction/schema_config.json`**
+(92 entity types, 67 relations, full domain/range constraints).  This JSON
+config is read by the `schema_validator` module at startup — `extract_triplets.py`
+no longer contains hardcoded entity/relation lists.
 
-The prompt file is passed via `--prompt-file`:
-
-The hardcoded validation rules (`VALID_ENTITY_TYPES`, `VALID_RELATIONS`,
-`RELATION_DOMAIN_RANGE` in `extract_triplets.py`) and the Triplex entity/
-relation lists (`_TRIPLEX_ENTITY_TYPES_PREFIXED`, `_TRIPLEX_RELATIONS_PREFIXED`)
-are synced with `schema_v2.md`.  If you update the schema, edit:
-1. `src/schema_iterations/schema_v2.md` (canonical)
-2. `prompts/triplet_extraction.txt` (system prompt — must match)
-3. `src/extraction/extract_triplets.py` (hardcoded lists — must match)
-
-Startup assertions verify that the Triplex lists match `VALID_ENTITY_TYPES` and
-`VALID_RELATIONS`.  If they diverge, you'll get an `AssertionError` at import
-time with a clear message.
+The system prompt is what the LLM sees.  The v7 prompt is at
+`prompts/triplet_extraction_v2.txt`.  Pass it via `--prompt-file`:
 
 ```bash
 food_lab/bin/python src/extraction/extract_triplets.py \
-    --prompt-file prompts/triplet_extraction.txt ...
+    --prompt-file prompts/triplet_extraction_v2.txt
+    --schema-file src/extraction/schema_config.json
 ```
 
-If you iterate on the schema, point at the new version:
+If you iterate on the schema, point at a custom config:
 
 ```bash
 food_lab/bin/python src/extraction/extract_triplets.py \
-    --prompt-file schema_iterations/v2.txt ...
+    --prompt-file prompts/triplet_extraction_v3.txt
+    --schema-file schema_iterations/schema_v4.json
 ```
 
-The hardcoded validation rules (`VALID_ENTITY_TYPES`, `VALID_RELATIONS`,
-`RELATION_DOMAIN_RANGE` in `extract_triplets.py`) and the Triplex entity/
-relation lists (`_TRIPLEX_ENTITY_TYPES_PREFIXED`, `_TRIPLEX_RELATIONS_PREFIXED`)
-must be updated manually when entity type or relation names change.  These are
-not auto-derived from the prompt file — they define the actual ontology
-constraints the validator enforces.
+If you update the schema, edit exactly three files:
+1. `src/schema_iterations/schema_v3.md` (canonical — add entity types, relations, domain/range)
+2. `src/extraction/schema_config.json` (runtime config — add entries to `entity_types`, `relations`, and `domain_range`)
+3. `prompts/triplet_extraction_v2.txt` (system prompt — list every type and relation the LLM can output)
+
+The `schema_validator` module handles the rest automatically — Triplex
+prefixed-name lists, canonical→prefixed mappings, and startup assertions are all
+derived from `schema_config.json`.  No more hardcoded lists to keep in sync.
 
 ### SCHEMA_MISMATCH
 
@@ -207,16 +203,30 @@ directory (recommended for single-dataset workflows) writes directly to
     {
       "subject": "Paneer",
       "subject_type": "fkg:Food",
+      "subject_id": "",
       "predicate": "fflo:belongsToCategory",
       "object": "UnripenedCheese",
       "object_type": "fflo:FoodCategory",
+      "object_id": "",
       "confidence": 0.9,
-      "evidence_span": "paneer (milk protein coagulated by the addition of citric acid"
+      "evidence_span": "paneer (milk protein coagulated by the addition of citric acid",
+      "event_id": "",
+      "event_class": "",
+      "polarity": "affirmed",
+      "mismatch_note": ""
     }
   ],
   "notes": ""
 }
 ```
+
+| v7 field | Type | Description |
+|---|---|---|
+| `subject_id` / `object_id` | string | Synthetic ID for structural nodes not appearing verbatim in the text. Omit (`""`) for named entities that do appear. |
+| `event_id` | string | Shared across all triplets from the same real-world event (format `ev_<topic>_<NNNN>`). Omit for standalone triplets. |
+| `event_class` | string | The FFLO class this `event_id` instantiates. Omit if `event_id` is omitted. |
+| `polarity` | string | `"affirmed"`, `"negated"`, or `"hedged"` (conditional/modal/disjunctive). |
+| `mismatch_note` | string | Filled only when `predicate` is `"UNMAPPED"` — describes the natural-language relation that couldn't be expressed. |
 
 ## CLI Reference
 
@@ -224,6 +234,7 @@ directory (recommended for single-dataset workflows) writes directly to
 |---|---|---|
 | `--chunks-csv` | *(required)* | Chunk CSV from `build_corpus.py` |
 | `--prompt-file` | *(required)* | System prompt template (contains the schema) |
+| `--schema-file` | `src/extraction/schema_config.json` | Path to schema JSON config (entity types, relations, domain/range constraints) |
 | `--output-dir` | *(required)* | Root output directory |
 | `--model` | `deepseek-v4-flash` | Model name, slugified for directory naming |
 | `--api-key` | `$DEEPSEEK_API_KEY` | API key (not needed for `--backend hf_transformers`) |
@@ -275,7 +286,7 @@ food_lab/bin/python src/validation/merge_retry.py \
 rm -rf src/outputs/triplets/fssai_docs
 ```
 
-## FSSAI Results (1,586 chunks)
+## FSSAI Results (1,586 chunks — v6 schema)
 
 | Metric | Count |
 |---|---|
@@ -285,6 +296,9 @@ rm -rf src/outputs/triplets/fssai_docs
 | Total individual triplets | 7,306 |
 | Schema violations | 2,100 |
 | Extraction failures (after retries) | 0 |
+
+*These results used the v6 schema (`schema_v2.md` + `triplet_extraction.txt`).
+v7 results with the new schema config are pending.*
 
 ## Requirements
 

@@ -139,20 +139,21 @@ are ignored by the judge — it only needs to retrieve text by `snippet_id`.
 
 The judge reads entity types and relations from an extraction prompt file to
 provide schema context in its system prompts.  By default it uses
-`prompts/triplet_extraction.txt`.  If you've moved or renamed the schema file,
-pass the new path explicitly:
+`prompts/triplet_extraction.txt` (FFLO v6 schema).  For v7 extractions, point at
+`prompts/triplet_extraction_v2.txt`.  This should match the `--prompt-file` you
+used during extraction:
 
 ```bash
+# v7 schema extraction → v7 judgment
 food_lab/bin/python src/validation/judge.py \
     --chunks-csv    src/data/FSSAI_docs/processed/chunks.csv \
     --triplets-dir  src/outputs/triplets \
     --output-dir    src/outputs/validation \
-    --schema-file   schema_iterations/v2.txt
+    --schema-file   prompts/triplet_extraction_v2.txt
 ```
 
-This should match the `--prompt-file` you used during extraction.  The schema is
-cached per path, so the file is only read once even when thousands of judgments
-are produced.
+The schema is cached per path, so the file is only read once even when
+thousands of judgments are produced.
 Using a different CSV (or one with renamed columns) will produce empty
 `evidence_text` for every judgment, rendering all verdicts meaningless — the
 judge would have no text to verify entailment against.
@@ -308,7 +309,7 @@ src/outputs/validation/fssai_docs/deepseek-v4-pro/run_YYYYMMDD_HHMMSS/
 | `--schema-file` | `prompts/triplet_extraction.txt` | Path to the extraction prompt file containing entity types and relations |
 | `--csv-id` | *(auto)* | Dataset identifier (auto-derived from CSV path) |
 
-## FSSAI Results (4,267 judgments)
+## FSSAI Results (4,267 judgments — v6 schema)
 
 | Branch | Items | Key findings |
 |---|---|---|

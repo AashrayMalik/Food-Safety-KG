@@ -1,0 +1,720 @@
+{
+  "entity_types": [
+    "fflo:FoodBusinessOperator",
+    "fflo:AdulterationAct",
+    "fflo:Adulterant",
+    "fflo:SyntheticAdulterant",
+    "fflo:NaturalAdulterant",
+    "fflo:ContaminantAdulterant",
+    "fflo:AdulterationMethod",
+    "fflo:FraudType",
+    "fflo:IntentionalityLevel",
+    "fkg:Food",
+    "fkg:Ingredient",
+    "fkg:ChemicalIngredient",
+    "fflo:FoodAdditive",
+    "fflo:AdditiveFunction",
+    "fflo:Preservative",
+    "fflo:Antioxidant",
+    "fflo:Emulsifier",
+    "fflo:Stabilizer",
+    "fflo:AcidityRegulator",
+    "fflo:FlourTreatmentAgent",
+    "fflo:Sequestrant",
+    "fflo:HumectantAdditive",
+    "fflo:Colourant",
+    "fflo:SweeteningAgent",
+    "fflo:Microorganism",
+    "fflo:ProcessingAid",
+    "fflo:ObligationType",
+    "fflo:LabelDeclaration",
+    "fflo:MarkAffixation",
+    "fflo:SignatureRequirement",
+    "fflo:PackagingRequirement",
+    "fflo:FormFiling",
+    "fflo:TestingRequirement",
+    "fflo:ConformanceRequirement",
+    "fflo:ProductionRequirement",
+    "fflo:SupplyChainStep",
+    "fflo:Production",
+    "fflo:Processing",
+    "fflo:Storage",
+    "fflo:Distribution",
+    "fflo:Retail",
+    "fflo:Import",
+    "fflo:SpreadEvent",
+    "fflo:TransformationEvent",
+    "fflo:GeographicRegion",
+    "fso:Sample",
+    "fso:SampleType",
+    "fso:Analysis",
+    "fso:AnalysisResult",
+    "ssn:Property",
+    "fso:Measurement",
+    "fso:UnitOfMeasure",
+    "fso:Laboratory",
+    "fso:Location",
+    "fflo:IncidentFinding",
+    "fflo:LabConfirmed",
+    "fflo:FieldDetected",
+    "fflo:SurveyAggregated",
+    "fflo:RecallTriggered",
+    "fflo:EvidenceSource",
+    "fflo:DetectionMethod",
+    "fflo:LaboratoryTest",
+    "fflo:FieldTest",
+    "fflo:SensoryTest",
+    "fflo:DetectionIndicator",
+    "fflo:DetectionKit",
+    "fflo:SamplingPlan",
+    "fflo:FoodStandard",
+    "fflo:RegulatoryDocument",
+    "fflo:RegulatoryBody",
+    "fflo:RegulatoryAction",
+    "fflo:PermissibleLimit",
+    "fflo:Violation",
+    "fflo:FoodCategory",
+    "fflo:TableReference",
+    "fflo:RegulatoryOfficer",
+    "fflo:RegulatoryActionType",
+    "fflo:Seizure",
+    "fflo:Removal",
+    "fflo:PenaltyReduction",
+    "fflo:Authorization",
+    "fflo:Sealing",
+    "fflo:HealthEffect",
+    "fflo:CausalHealthEffect",
+    "fflo:AcuteEffect",
+    "fflo:ChronicEffect",
+    "fflo:VulnerablePopulation",
+    "xsd:string",
+    "xsd:decimal"
+  ],
+
+  "relations": [
+    "prov:wasAssociatedWith",
+    "prov:used",
+    "prov:wasGeneratedBy",
+    "prov:wasAttributedTo",
+    "fflo:hasAdulterant",
+    "fflo:hasAdulterationMethod",
+    "fflo:hasFraudType",
+    "fflo:hasIntentionality",
+    "fflo:isSubstituteFor",
+    "fflo:commonIn",
+    "fflo:foundAt",
+    "fflo:hasFunction",
+    "fkg:hasIngredient",
+    "prov:wasInfluencedBy",
+    "fflo:propagatesTo",
+    "fflo:carriedBy",
+    "fflo:occursAt",
+    "fflo:inputTo",
+    "fflo:outputOf",
+    "fso:isPerformedOn",
+    "fso:isPerformedAt",
+    "fso:isResultOf",
+    "fso:relatesToProperty",
+    "fso:isMeasuredIn",
+    "fso:hasSampleType",
+    "fso:hasLocation",
+    "fflo:hasNumericValue",
+    "fflo:identifies",
+    "fflo:foundIn",
+    "fflo:producedBy",
+    "fflo:confirmedBy",
+    "fflo:supportedBy",
+    "fflo:foundAtStep",
+    "fflo:inRegion",
+    "fflo:triggeredAction",
+    "fflo:collectedAt",
+    "fflo:detectedBy",
+    "fflo:producesIndicator",
+    "fflo:requiresKit",
+    "fflo:isPerformedAs",
+    "lkif:created_by",
+    "fflo:belongsToCategory",
+    "fflo:appliesToCategory",
+    "fflo:hasValue",
+    "fflo:forProperty",
+    "fflo:comparedAgainst",
+    "fflo:definedIn",
+    "fflo:appliesTo",
+    "fflo:inFood",
+    "fflo:specifiedIn",
+    "fflo:issuedBy",
+    "fflo:targets",
+    "fflo:citesFinding",
+    "fflo:constitutes",
+    "fflo:violates",
+    "fflo:defines",
+    "fflo:hasPermissibleLimit",
+    "fflo:appliesToFood",
+    "fflo:compliesWith",
+    "fflo:amends",
+    "fflo:hasSubcategory",
+    "fflo:hasDefinition",
+    "fflo:tableLabel",
+    "fflo:causesEffect",
+    "fflo:affectsPopulation",
+    "fflo:hasEffectType",
+    "fflo:associatedWith",
+    "fflo:hasObligation",
+    "fflo:hasScientificName",
+    "fflo:governsSampling",
+    "fflo:isEmpoweredTo",
+    "fflo:actsOnBehalfOf"
+  ],
+
+  "domain_range": {
+    "prov:wasAssociatedWith": [
+      {"domain": ["fflo:AdulterationAct"], "range": ["fflo:FoodBusinessOperator"]}
+    ],
+    "prov:used": [
+      {"domain": ["fflo:AdulterationAct"], "range": ["fkg:Food"]}
+    ],
+    "prov:wasGeneratedBy": [
+      {"domain": ["fflo:Adulterant"], "range": ["fflo:AdulterationAct"]},
+      {"domain": ["fflo:SpreadEvent"], "range": ["fflo:TransformationEvent"]}
+    ],
+    "prov:wasAttributedTo": [
+      {"domain": ["fflo:IncidentFinding"], "range": ["fflo:FoodBusinessOperator"]}
+    ],
+    "fflo:hasAdulterant": [
+      {
+        "domain": ["fkg:Food"],
+        "range": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ]
+      }
+    ],
+    "fflo:hasAdulterationMethod": [
+      {"domain": ["fkg:Food"], "range": ["fflo:AdulterationMethod"]}
+    ],
+    "fflo:hasFraudType": [
+      {"domain": ["fflo:AdulterationMethod"], "range": ["fflo:FraudType"]}
+    ],
+    "fflo:hasIntentionality": [
+      {"domain": ["fflo:AdulterationMethod"], "range": ["fflo:IntentionalityLevel"]}
+    ],
+    "fflo:isSubstituteFor": [
+      {
+        "domain": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ],
+        "range": ["fkg:Food"]
+      }
+    ],
+    "fflo:commonIn": [
+      {
+        "domain": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ],
+        "range": ["fflo:GeographicRegion"]
+      }
+    ],
+    "fflo:foundAt": [
+      {
+        "domain": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ],
+        "range": [
+          "fflo:SupplyChainStep",
+          "fflo:Production",
+          "fflo:Processing",
+          "fflo:Storage",
+          "fflo:Distribution",
+          "fflo:Retail",
+          "fflo:Import"
+        ]
+      }
+    ],
+    "fflo:hasFunction": [
+      {
+        "domain": ["fflo:FoodAdditive"],
+        "range": [
+          "fflo:AdditiveFunction",
+          "fflo:Preservative",
+          "fflo:Antioxidant",
+          "fflo:Emulsifier",
+          "fflo:Stabilizer",
+          "fflo:AcidityRegulator",
+          "fflo:FlourTreatmentAgent",
+          "fflo:Sequestrant",
+          "fflo:HumectantAdditive",
+          "fflo:Colourant",
+          "fflo:SweeteningAgent"
+        ]
+      }
+    ],
+    "fkg:hasIngredient": [
+      {"domain": ["fkg:Food"], "range": ["fkg:Ingredient"]}
+    ],
+    "prov:wasInfluencedBy": [
+      {"domain": ["fflo:SpreadEvent"], "range": ["fflo:AdulterationAct"]}
+    ],
+    "fflo:propagatesTo": [
+      {
+        "domain": [
+          "fflo:SupplyChainStep",
+          "fflo:Production",
+          "fflo:Processing",
+          "fflo:Storage",
+          "fflo:Distribution",
+          "fflo:Retail",
+          "fflo:Import"
+        ],
+        "range": [
+          "fflo:SupplyChainStep",
+          "fflo:Production",
+          "fflo:Processing",
+          "fflo:Storage",
+          "fflo:Distribution",
+          "fflo:Retail",
+          "fflo:Import"
+        ]
+      }
+    ],
+    "fflo:carriedBy": [
+      {"domain": ["fflo:SpreadEvent"], "range": ["fkg:Food"]}
+    ],
+    "fflo:occursAt": [
+      {
+        "domain": ["fflo:SpreadEvent"],
+        "range": [
+          "fflo:SupplyChainStep",
+          "fflo:Production",
+          "fflo:Processing",
+          "fflo:Storage",
+          "fflo:Distribution",
+          "fflo:Retail",
+          "fflo:Import"
+        ]
+      }
+    ],
+    "fflo:inputTo": [
+      {"domain": ["fkg:Food"], "range": ["fflo:TransformationEvent"]}
+    ],
+    "fflo:outputOf": [
+      {"domain": ["fkg:Food"], "range": ["fflo:TransformationEvent"]}
+    ],
+    "fso:isPerformedOn": [
+      {"domain": ["fso:Analysis"], "range": ["fso:Sample"]}
+    ],
+    "fso:isPerformedAt": [
+      {"domain": ["fso:Analysis"], "range": ["fso:Laboratory"]}
+    ],
+    "fso:isResultOf": [
+      {"domain": ["fso:AnalysisResult"], "range": ["fso:Analysis"]}
+    ],
+    "fso:relatesToProperty": [
+      {"domain": ["fso:AnalysisResult"], "range": ["ssn:Property"]}
+    ],
+    "fso:isMeasuredIn": [
+      {"domain": ["fso:Measurement"], "range": ["fso:UnitOfMeasure"]}
+    ],
+    "fso:hasSampleType": [
+      {"domain": ["fso:Sample"], "range": ["fso:SampleType"]}
+    ],
+    "fso:hasLocation": [
+      {"domain": ["fso:Sample"], "range": ["fso:Location"]}
+    ],
+    "fflo:hasNumericValue": [
+      {"domain": ["fso:Measurement"], "range": []}
+    ],
+    "fflo:identifies": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ]
+      }
+    ],
+    "fflo:foundIn": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": ["fkg:Food"]
+      }
+    ],
+    "fflo:producedBy": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": [
+          "fflo:DetectionMethod",
+          "fflo:LaboratoryTest",
+          "fflo:FieldTest",
+          "fflo:SensoryTest"
+        ]
+      }
+    ],
+    "fflo:confirmedBy": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed"
+        ],
+        "range": ["fso:AnalysisResult"]
+      }
+    ],
+    "fflo:supportedBy": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": ["fflo:EvidenceSource"]
+      }
+    ],
+    "fflo:foundAtStep": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": [
+          "fflo:SupplyChainStep",
+          "fflo:Production",
+          "fflo:Processing",
+          "fflo:Storage",
+          "fflo:Distribution",
+          "fflo:Retail",
+          "fflo:Import"
+        ]
+      }
+    ],
+    "fflo:inRegion": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": ["fflo:GeographicRegion"]
+      }
+    ],
+    "fflo:triggeredAction": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": ["fflo:RegulatoryAction"]
+      }
+    ],
+    "fflo:collectedAt": [
+      {
+        "domain": ["fso:Sample"],
+        "range": [
+          "fflo:SupplyChainStep",
+          "fflo:Production",
+          "fflo:Processing",
+          "fflo:Storage",
+          "fflo:Distribution",
+          "fflo:Retail",
+          "fflo:Import"
+        ]
+      }
+    ],
+    "fflo:detectedBy": [
+      {
+        "domain": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ],
+        "range": [
+          "fflo:DetectionMethod",
+          "fflo:LaboratoryTest",
+          "fflo:FieldTest",
+          "fflo:SensoryTest"
+        ]
+      }
+    ],
+    "fflo:producesIndicator": [
+      {
+        "domain": [
+          "fflo:DetectionMethod",
+          "fflo:LaboratoryTest",
+          "fflo:FieldTest",
+          "fflo:SensoryTest"
+        ],
+        "range": ["fflo:DetectionIndicator"]
+      }
+    ],
+    "fflo:requiresKit": [
+      {
+        "domain": [
+          "fflo:DetectionMethod",
+          "fflo:LaboratoryTest",
+          "fflo:FieldTest",
+          "fflo:SensoryTest"
+        ],
+        "range": ["fflo:DetectionKit"]
+      }
+    ],
+    "fflo:isPerformedAs": [
+      {"domain": ["fflo:LaboratoryTest"], "range": ["fso:Analysis"]}
+    ],
+    "lkif:created_by": [
+      {"domain": ["fflo:FoodStandard"], "range": ["fflo:RegulatoryBody"]}
+    ],
+    "fflo:belongsToCategory": [
+      {"domain": ["fkg:Food"], "range": ["fflo:FoodCategory"]}
+    ],
+    "fflo:appliesToCategory": [
+      {"domain": ["fflo:FoodStandard"], "range": ["fflo:FoodCategory"]}
+    ],
+    "fflo:hasValue": [
+      {"domain": ["fflo:PermissibleLimit"], "range": ["fso:Measurement"]}
+    ],
+    "fflo:forProperty": [
+      {"domain": ["fflo:PermissibleLimit"], "range": ["ssn:Property"]}
+    ],
+    "fflo:comparedAgainst": [
+      {"domain": ["fso:AnalysisResult"], "range": ["fflo:PermissibleLimit"]}
+    ],
+    "fflo:definedIn": [
+      {"domain": ["fflo:FoodStandard"], "range": ["fflo:RegulatoryDocument"]}
+    ],
+    "fflo:appliesTo": [
+      {
+        "domain": ["fflo:PermissibleLimit"],
+        "range": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ]
+      }
+    ],
+    "fflo:inFood": [
+      {"domain": ["fflo:PermissibleLimit"], "range": ["fkg:Food"]}
+    ],
+    "fflo:specifiedIn": [
+      {
+        "domain": ["fflo:PermissibleLimit"],
+        "range": ["fflo:FoodStandard", "fflo:TableReference"]
+      }
+    ],
+    "fflo:defines": [
+      {
+        "domain": ["fflo:RegulatoryDocument"],
+        "range": ["fflo:FoodCategory", "fflo:FoodStandard"]
+      }
+    ],
+    "fflo:hasPermissibleLimit": [
+      {
+        "domain": ["fkg:Food", "fkg:Ingredient"],
+        "range": ["fflo:PermissibleLimit"]
+      }
+    ],
+    "fflo:appliesToFood": [
+      {
+        "domain": ["fflo:FoodStandard", "fflo:RegulatoryDocument"],
+        "range": ["fkg:Food"]
+      }
+    ],
+    "fflo:compliesWith": [
+      {
+        "domain": ["fflo:FoodBusinessOperator", "fkg:Food"],
+        "range": ["fflo:FoodStandard", "fflo:RegulatoryDocument"]
+      }
+    ],
+    "fflo:amends": [
+      {"domain": ["fflo:RegulatoryDocument"], "range": ["fflo:RegulatoryDocument"]}
+    ],
+    "fflo:hasSubcategory": [
+      {"domain": ["fflo:FoodCategory"], "range": ["fflo:FoodCategory"]}
+    ],
+    "fflo:hasDefinition": [
+      {
+        "domain": [
+          "fflo:FoodCategory",
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ],
+        "range": []
+      }
+    ],
+    "fflo:tableLabel": [
+      {"domain": ["fflo:TableReference"], "range": []}
+    ],
+    "fflo:issuedBy": [
+      {"domain": ["fflo:RegulatoryAction"], "range": ["fflo:RegulatoryBody"]}
+    ],
+    "fflo:targets": [
+      {"domain": ["fflo:RegulatoryAction"], "range": ["fkg:Food"]}
+    ],
+    "fflo:citesFinding": [
+      {
+        "domain": ["fflo:RegulatoryAction"],
+        "range": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ]
+      }
+    ],
+    "fflo:constitutes": [
+      {
+        "domain": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ],
+        "range": ["fflo:Violation"]
+      }
+    ],
+    "fflo:violates": [
+      {"domain": ["fflo:Violation"], "range": ["fflo:PermissibleLimit"]}
+    ],
+    "fflo:causesEffect": [
+      {
+        "domain": [
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant"
+        ],
+        "range": [
+          "fflo:HealthEffect",
+          "fflo:CausalHealthEffect",
+          "fflo:AcuteEffect",
+          "fflo:ChronicEffect"
+        ]
+      }
+    ],
+    "fflo:affectsPopulation": [
+      {
+        "domain": [
+          "fflo:HealthEffect",
+          "fflo:CausalHealthEffect",
+          "fflo:AcuteEffect",
+          "fflo:ChronicEffect"
+        ],
+        "range": ["fflo:VulnerablePopulation"]
+      }
+    ],
+    "fflo:hasEffectType": [
+      {
+        "domain": [
+          "fflo:HealthEffect",
+          "fflo:CausalHealthEffect"
+        ],
+        "range": [
+          "fflo:AcuteEffect",
+          "fflo:ChronicEffect"
+        ]
+      }
+    ],
+    "fflo:associatedWith": [
+      {
+        "domain": [
+          "fflo:HealthEffect",
+          "fflo:CausalHealthEffect",
+          "fflo:AcuteEffect",
+          "fflo:ChronicEffect"
+        ],
+        "range": [
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered"
+        ]
+      }
+    ],
+    "fflo:hasObligation": [
+      {
+        "domain": [
+          "fflo:FoodBusinessOperator",
+          "fkg:Food"
+        ],
+        "range": [
+          "fflo:ObligationType",
+          "fflo:LabelDeclaration",
+          "fflo:MarkAffixation",
+          "fflo:SignatureRequirement",
+          "fflo:PackagingRequirement",
+          "fflo:FormFiling",
+          "fflo:TestingRequirement",
+          "fflo:ConformanceRequirement",
+          "fflo:ProductionRequirement"
+        ]
+      }
+    ],
+    "fflo:hasScientificName": [
+      {"domain": ["fkg:Food", "fkg:Ingredient"], "range": []}
+    ],
+    "fflo:governsSampling": [
+      {"domain": ["fflo:SamplingPlan"], "range": ["fso:SampleType"]}
+    ],
+    "fflo:isEmpoweredTo": [
+      {
+        "domain": ["fflo:RegulatoryBody"],
+        "range": [
+          "fflo:RegulatoryActionType",
+          "fflo:Seizure",
+          "fflo:Removal",
+          "fflo:PenaltyReduction",
+          "fflo:Authorization",
+          "fflo:Sealing"
+        ]
+      }
+    ],
+    "fflo:actsOnBehalfOf": [
+      {"domain": ["fflo:RegulatoryOfficer"], "range": ["fflo:RegulatoryBody"]}
+    ]
+  }
+}

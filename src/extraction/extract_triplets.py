@@ -118,9 +118,51 @@ from schema_validator import (  # noqa: E402
 # Build system prompt (schema embedded for resilience)
 # ---------------------------------------------------------------------------
 
+def _generate_schema_text(compact: bool = False) -> tuple[str, str]:
+    """Return (entity_types_text, relations_text) ready for prompt injection.
+
+    If *compact*, returns comma-separated single-line strings.
+    Otherwise returns indented multi-line strings with one entry per line.
+    Entities/relations are read from the current schema_validator state,
+    so they reflect any ``--schema-file`` override at runtime.
+    """
+    import schema_validator
+    entities = schema_validator._TRIPLEX_ENTITY_TYPES_PREFIXED
+    relations = schema_validator._TRIPLEX_RELATIONS_PREFIXED
+
+    if compact:
+        et = ", ".join(entities)
+        rt = ", ".join(relations)
+    else:
+        et = "\n".join(f"  {e}" for e in entities)
+        rt = "\n".join(f"  {r}" for r in relations)
+    return et, rt
+
+
 def build_system_prompt(prompt_file: Path) -> str:
-    """Read user's prompt template and append schema hints."""
+    """Read user's prompt template, replacing schema placeholders with
+    live values from the current schema config.
+
+    Supported placeholders (use one or both):
+      ``{{SCHEMA_ENTITY_TYPES}}``  — indented entity type list
+      ``{{SCHEMA_ENTITY_TYPES_COMPACT}}`` — comma-separated single line
+      ``{{SCHEMA_RELATIONS}}``     — indented relation list
+      ``{{SCHEMA_RELATIONS_COMPACT}}`` — comma-separated single line
+    """
     base = prompt_file.read_text(encoding="utf-8").strip()
+
+    if any(p in base for p in (
+        "{{SCHEMA_ENTITY_TYPES}}", "{{SCHEMA_ENTITY_TYPES_COMPACT}}",
+        "{{SCHEMA_RELATIONS}}", "{{SCHEMA_RELATIONS_COMPACT}}",
+    )):
+        et_multiline, rt_multiline = _generate_schema_text(compact=False)
+        et_compact, rt_compact = _generate_schema_text(compact=True)
+
+        base = base.replace("{{SCHEMA_ENTITY_TYPES}}", et_multiline)
+        base = base.replace("{{SCHEMA_ENTITY_TYPES_COMPACT}}", et_compact)
+        base = base.replace("{{SCHEMA_RELATIONS}}", rt_multiline)
+        base = base.replace("{{SCHEMA_RELATIONS_COMPACT}}", rt_compact)
+
     return base
 
 

@@ -5,28 +5,7 @@ You are a structured information extraction engine for the Food Fraud and Labeli
 SCHEMA (v7) — use these exact names, no others. This is the complete v7 schema — every entity type and relation below is fair game; do not treat any subset as more "core" than another.
 
 Entity types (complete v7 schema):
-  fflo:FoodBusinessOperator, fflo:AdulterationAct, fflo:Adulterant,
-  fflo:SyntheticAdulterant, fflo:NaturalAdulterant, fflo:ContaminantAdulterant,
-  fflo:Microorganism, fflo:AdulterationMethod, fflo:FraudType,
-  fflo:IntentionalityLevel, fflo:FoodAdditive, fflo:ProcessingAid,
-  fflo:AdditiveFunction, fflo:ObligationType, fkg:Food, fkg:Ingredient,
-  fkg:ChemicalIngredient,
-  fflo:SupplyChainStep, fflo:Production, fflo:Processing, fflo:Storage,
-  fflo:Distribution, fflo:Retail, fflo:Import, fflo:SpreadEvent,
-  fflo:TransformationEvent,
-  fso:Sample, fso:SampleType, fso:Analysis,
-  fso:AnalysisResult, ssn:Property, fso:Measurement, fso:UnitOfMeasure,
-  fso:Laboratory, fso:Location, fflo:IncidentFinding,
-  fflo:LabConfirmed, fflo:FieldDetected, fflo:SurveyAggregated, fflo:RecallTriggered,
-  fflo:EvidenceSource,
-  fflo:DetectionMethod, fflo:LaboratoryTest, fflo:FieldTest, fflo:SensoryTest,
-  fflo:DetectionIndicator, fflo:DetectionKit, fflo:SamplingPlan,
-  fflo:FoodStandard, fflo:RegulatoryDocument, fflo:RegulatoryBody,
-  fflo:RegulatoryOfficer, fflo:RegulatoryAction, fflo:RegulatoryActionType,
-  fflo:PermissibleLimit, fflo:Violation, fflo:FoodCategory,
-  fflo:TableReference, fflo:GeographicRegion,
-  fflo:HealthEffect, fflo:CausalHealthEffect,
-  fflo:AcuteEffect, fflo:ChronicEffect, fflo:VulnerablePopulation
+{{SCHEMA_ENTITY_TYPES}}
 
 Notes on entity subtypes:
 - fflo:LabConfirmed, fflo:FieldDetected, fflo:SurveyAggregated, and
@@ -39,27 +18,7 @@ Notes on entity subtypes:
   the object of fflo:inRegion or fflo:commonIn.
 
 Relations (complete v7 schema):
-  prov:wasAssociatedWith, prov:used, prov:wasGeneratedBy, prov:wasAttributedTo,
-  fflo:hasAdulterant, fflo:hasAdulterationMethod, fflo:hasFraudType,
-  fflo:hasIntentionality, fflo:isSubstituteFor, fflo:commonIn, fflo:foundAt,
-  fflo:hasFunction, fkg:hasIngredient,
-  fflo:hasObligation, fflo:hasScientificName,
-  prov:wasInfluencedBy, fflo:propagatesTo, fflo:carriedBy, fflo:occursAt,
-  fflo:inputTo, fflo:outputOf,
-  fso:isPerformedOn, fso:isPerformedAt, fso:isResultOf, fso:relatesToProperty,
-  fso:isMeasuredIn, fso:hasSampleType, fso:hasLocation, fflo:hasNumericValue,
-  fflo:identifies, fflo:foundIn, fflo:producedBy,
-  fflo:confirmedBy, fflo:supportedBy, fflo:foundAtStep, fflo:inRegion,
-  fflo:triggeredAction, fflo:collectedAt, fflo:detectedBy,
-  fflo:producesIndicator, fflo:requiresKit, fflo:isPerformedAs, fflo:governsSampling,
-  lkif:created_by, fflo:belongsToCategory, fflo:appliesToCategory, fflo:hasValue,
-  fflo:forProperty, fflo:comparedAgainst, fflo:definedIn, fflo:defines,
-  fflo:appliesTo, fflo:inFood, fflo:hasPermissibleLimit, fflo:specifiedIn,
-  fflo:appliesToFood, fflo:compliesWith, fflo:amends, fflo:hasSubcategory,
-  fflo:hasDefinition, fflo:tableLabel, fflo:issuedBy, fflo:targets,
-  fflo:citesFinding, fflo:constitutes, fflo:violates, fflo:isEmpoweredTo,
-  fflo:actsOnBehalfOf, fflo:causesEffect, fflo:affectsPopulation,
-  fflo:hasEffectType, fflo:associatedWith
+{{SCHEMA_RELATIONS}}
 
 Notes on relations added back for full coverage:
 - The prov: relations (wasAssociatedWith, used, wasGeneratedBy,

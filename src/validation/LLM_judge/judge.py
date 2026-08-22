@@ -20,7 +20,7 @@ same (csv_id, judge_model) combination and continue where it left off.
 
 Usage::
 
-    food_lab/bin/python src/validation/judge.py \\
+    food_lab/bin/python src/validation/LLM_judge/judge.py \\
         --chunks-csv  src/data/FSSAI_docs/processed/chunks.csv \\
         --triplets-dir outputs/triplets \\
         --output-dir  outputs/validation \\
@@ -92,7 +92,7 @@ def load_chunks(csv_path: Path) -> dict[str, dict[str, str]]:
     """Return snippet_id → row dict (evidence_text, source_id, …)."""
     lookup: dict[str, dict[str, str]] = {}
     if not csv_path.exists():
-        print(f"  [WARN]  chunks CSV not found: {csv_path}", file=sys.stderr)
+        print(f"  [WARN]  chunks CSV not found: {csv_path}", file=sys.stderr, flush=True)
         return lookup
     with csv_path.open("r", encoding="utf-8", newline="") as fh:
         for row in csv.DictReader(fh):
@@ -104,7 +104,7 @@ def load_triplets(jsonl_path: Path) -> list[dict[str, Any]]:
     """Return list of per-snippet parsed outputs."""
     items: list[dict[str, Any]] = []
     if not jsonl_path.exists():
-        print(f"  [WARN]  triplets JSONL not found: {jsonl_path}", file=sys.stderr)
+        print(f"  [WARN]  triplets JSONL not found: {jsonl_path}", file=sys.stderr, flush=True)
         return items
     with jsonl_path.open("r", encoding="utf-8") as fh:
         for line in fh:
@@ -463,6 +463,7 @@ async def _judge_one(
     item: JudgeItem,
     timeout: float,
     output_path: Path,
+    total: int,
     *,
     use_logprobs: bool = False,
     schema_path: str | None = None,
@@ -528,6 +529,8 @@ async def _judge_one(
                 )
 
                 _append_jsonl(output_path, record)
+                done = _count_jsonl(output_path)
+                print(f"  [{done:>5d}/{total}] OK  {short_key}", flush=True)
                 return item.key, "ok"
 
             except RetryableError as exc:
@@ -536,15 +539,17 @@ async def _judge_one(
                     delay = RETRY_BASE_DELAY * (2 ** (attempt - 1))
                     print(
                         f"  [·] RETRY {attempt}/{MAX_RETRIES} "
-                        f"{short_key} (wait {delay:.0f}s)  {exc!r}"
+                        f"{short_key} (wait {delay:.0f}s)  {exc!r}",
+                        flush=True,
                     )
                     await asyncio.sleep(delay)
                 else:
-                    print(f"  [✗] FAIL after retries {short_key}: {exc!r}")
+                    print(f"  [✗] FAIL after retries {short_key}: {exc!r}",
+                          flush=True)
 
             except JudgeError as exc:
                 last_error = str(exc)
-                print(f"  [✗] FAIL {short_key}: {exc!r}")
+                print(f"  [✗] FAIL {short_key}: {exc!r}", flush=True)
                 break
 
         # Write failure record
@@ -578,9 +583,9 @@ async def process_branch(
         return 0, 0
 
     total = len(items)
-    print(f"\n{'='*60}")
-    print(f"Branch: {branch_name}  ({total} items)")
-    print(f"{'='*60}")
+    print(f"\n{'='*60}", flush=True)
+    print(f"Branch: {branch_name}  ({total} items)", flush=True)
+    print(f"{'='*60}", flush=True)
 
     sem = asyncio.Semaphore(concurrency)
     limits = httpx.Limits(
@@ -590,7 +595,7 @@ async def process_branch(
     async with httpx.AsyncClient(limits=limits) as client:
         tasks = [
             _judge_one(sem, client, base_url, api_key, model,
-                       item, timeout, output_path,
+                       item, timeout, output_path, total,
                        use_logprobs=use_logprobs,
                        schema_path=schema_path)
             for item in items
@@ -600,7 +605,7 @@ async def process_branch(
     ok = sum(1 for r in results if isinstance(r, tuple) and r[1] == "ok")
     failed = sum(1 for r in results if isinstance(r, tuple) and r[1] == "failed")
     exc = sum(1 for r in results if isinstance(r, BaseException))
-    print(f"  → OK: {ok}  Failed: {failed}  Exceptions: {exc}")
+    print(f"  → OK: {ok}  Failed: {failed}  Exceptions: {exc}", flush=True)
     return ok, failed
 
 
@@ -773,6 +778,16 @@ def _append_jsonl(path: Path, obj: dict[str, Any]) -> None:
         fh.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
 
+def _count_jsonl(path: Path) -> int:
+    if not path.exists():
+        return 0
+    count = 0
+    with path.open("r") as fh:
+        for _ in fh:
+            count += 1
+    return count
+
+
 def _model_slug(model: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]+", "-", model).strip("-").lower()
 
@@ -829,17 +844,17 @@ async def run_judge_pipeline(
         )
         if existing:
             run_dir = existing[-1]
-            print(f"Resuming from existing run: {run_dir}")
+            print(f"Resuming from existing run: {run_dir}", flush=True)
         else:
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             run_dir = base_run_parent / f"run_{ts}"
-            print(f"No prior run found; creating new: {run_dir}")
+            print(f"No prior run found; creating new: {run_dir}", flush=True)
     else:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         run_dir = base_run_parent / f"run_{ts}"
 
     run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Run directory: {run_dir}")
+    print(f"Run directory: {run_dir}", flush=True)
 
     # --- retry-failures: strip judge_error entries so resume picks them up ---
     if retry_failures:
@@ -865,12 +880,12 @@ async def run_judge_pipeline(
             path.write_text("\n".join(kept) + "\n" if kept else "",
                             encoding="utf-8")
             stripped_total += stripped
-        print(f"  Stripped {stripped_total} judge_error entries; will retry\n")
+        print(f"  Stripped {stripped_total} judge_error entries; will retry\n", flush=True)
 
     # --- load data ---
-    print("\nLoading data...")
+    print("\nLoading data...", flush=True)
     chunks_lookup = load_chunks(chunks_csv)
-    print(f"  chunks: {len(chunks_lookup)}")
+    print(f"  chunks: {len(chunks_lookup)}", flush=True)
 
     triplets_path = triplets_dir / "triplets.jsonl"
     failures_path = triplets_dir / "failures.jsonl"
@@ -879,16 +894,16 @@ async def run_judge_pipeline(
     triplet_outputs = load_triplets(triplets_path)
     failures = load_failures(failures_path)
     violations = load_violations(violations_path)
-    print(f"  triplets: {len(triplet_outputs)} parsed outputs")
-    print(f"  failures: {len(failures)} hard failures")
-    print(f"  violations: {len(violations)} violation records")
+    print(f"  triplets: {len(triplet_outputs)} parsed outputs", flush=True)
+    print(f"  failures: {len(failures)} hard failures", flush=True)
+    print(f"  violations: {len(violations)} violation records", flush=True)
 
     # --- classify ---
     branches = classify_items(chunks_lookup, triplet_outputs, violations)
     branch_totals = {k: len(v) for k, v in branches.items()}
-    print(f"\nBranch routing:")
+    print(f"\nBranch routing:", flush=True)
     for bname, cnt in branch_totals.items():
-        print(f"  {bname}: {cnt} items")
+        print(f"  {bname}: {cnt} items", flush=True)
 
     # --- resume filtering ---
     total_skipped = 0
@@ -902,11 +917,11 @@ async def run_judge_pipeline(
             new_items = [it for it in items if it.key not in existing_keys]
             skipped = len(items) - len(new_items)
             branches[bname] = new_items
-            print(f"  [{bname}] skipping {skipped} already judged items")
+            print(f"  [{bname}] skipping {skipped} already judged items", flush=True)
             total_skipped += skipped
 
     if total_skipped:
-        print(f"  Total skipped (resume): {total_skipped}")
+        print(f"  Total skipped (resume): {total_skipped}", flush=True)
 
     # --- judge each branch sequentially ---
     total_ok = 0
@@ -928,24 +943,24 @@ async def run_judge_pipeline(
         total_failed += failed
 
     # --- aggregate ---
-    print(f"\n{'='*60}")
-    print("Aggregating results...")
+    print(f"\n{'='*60}", flush=True)
+    print("Aggregating results...", flush=True)
     report = aggregate(run_dir, branches, len(failures))
     report_path = run_dir / "aggregate_report.json"
     report_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    print(f"  Report written to {report_path}")
+    print(f"  Report written to {report_path}", flush=True)
 
     # --- summary ---
-    print(f"\n{'='*60}")
-    print("DONE")
-    print(f"  Judged OK:  {total_ok}")
-    print(f"  Failed:     {total_failed}")
+    print(f"\n{'='*60}", flush=True)
+    print("DONE", flush=True)
+    print(f"  Judged OK:  {total_ok}", flush=True)
+    print(f"  Failed:     {total_failed}", flush=True)
     for bname, info in report["branches"].items():
         vd = info.get("verdicts", {})
         vd_str = ", ".join(f"{k}:{v}" for k, v in sorted(vd.items()))
-        print(f"  [{bname}] {vd_str}")
+        print(f"  [{bname}] {vd_str}", flush=True)
 
     return 0 if total_failed == 0 else 1
 
@@ -984,8 +999,8 @@ def _parse_args() -> argparse.Namespace:
                    help="Request token log-probabilities from the judge model "
                         "to compute objective confidence scores per judgment")
     p.add_argument("--schema-file", type=str, default=None,
-                   help="Path to the extraction prompt file containing entity "
-                        "types and relations (default: prompts/triplet_extraction.txt)")
+                   help="Path to schema JSON config file "
+                        "(default: auto-detected schema_config.json)")
     p.add_argument("--resume", action="store_true",
                    help="Resume from the most recent run directory for the same "
                         "dataset+model pair")
@@ -1000,7 +1015,7 @@ def main() -> int:
 
     if not args.api_key:
         print("ERROR: No API key provided. Set DEEPSEEK_API_KEY or OPENAI_API_KEY, "
-              "or pass --api-key.", file=sys.stderr)
+              "or pass --api-key.", file=sys.stderr, flush=True)
         return 1
 
     return asyncio.run(

@@ -90,7 +90,6 @@
     "xsd:string",
     "xsd:decimal"
   ],
-
   "relations": [
     "prov:wasAssociatedWith",
     "prov:used",
@@ -165,24 +164,60 @@
     "fflo:isEmpoweredTo",
     "fflo:actsOnBehalfOf"
   ],
-
   "domain_range": {
     "prov:wasAssociatedWith": [
-      {"domain": ["fflo:AdulterationAct"], "range": ["fflo:FoodBusinessOperator"]}
+      {
+        "domain": [
+          "fflo:AdulterationAct"
+        ],
+        "range": [
+          "fflo:FoodBusinessOperator"
+        ]
+      }
     ],
     "prov:used": [
-      {"domain": ["fflo:AdulterationAct"], "range": ["fkg:Food"]}
+      {
+        "domain": [
+          "fflo:AdulterationAct"
+        ],
+        "range": [
+          "fkg:Food"
+        ]
+      }
     ],
     "prov:wasGeneratedBy": [
-      {"domain": ["fflo:Adulterant"], "range": ["fflo:AdulterationAct"]},
-      {"domain": ["fflo:SpreadEvent"], "range": ["fflo:TransformationEvent"]}
+      {
+        "domain": [
+          "fflo:Adulterant"
+        ],
+        "range": [
+          "fflo:AdulterationAct"
+        ]
+      },
+      {
+        "domain": [
+          "fflo:SpreadEvent"
+        ],
+        "range": [
+          "fflo:TransformationEvent"
+        ]
+      }
     ],
     "prov:wasAttributedTo": [
-      {"domain": ["fflo:IncidentFinding"], "range": ["fflo:FoodBusinessOperator"]}
+      {
+        "domain": [
+          "fflo:IncidentFinding"
+        ],
+        "range": [
+          "fflo:FoodBusinessOperator"
+        ]
+      }
     ],
     "fflo:hasAdulterant": [
       {
-        "domain": ["fkg:Food"],
+        "domain": [
+          "fkg:Food"
+        ],
         "range": [
           "fflo:Adulterant",
           "fflo:SyntheticAdulterant",
@@ -192,13 +227,34 @@
       }
     ],
     "fflo:hasAdulterationMethod": [
-      {"domain": ["fkg:Food"], "range": ["fflo:AdulterationMethod"]}
+      {
+        "domain": [
+          "fkg:Food"
+        ],
+        "range": [
+          "fflo:AdulterationMethod"
+        ]
+      }
     ],
     "fflo:hasFraudType": [
-      {"domain": ["fflo:AdulterationMethod"], "range": ["fflo:FraudType"]}
+      {
+        "domain": [
+          "fflo:AdulterationMethod"
+        ],
+        "range": [
+          "fflo:FraudType"
+        ]
+      }
     ],
     "fflo:hasIntentionality": [
-      {"domain": ["fflo:AdulterationMethod"], "range": ["fflo:IntentionalityLevel"]}
+      {
+        "domain": [
+          "fflo:AdulterationMethod"
+        ],
+        "range": [
+          "fflo:IntentionalityLevel"
+        ]
+      }
     ],
     "fflo:isSubstituteFor": [
       {
@@ -208,7 +264,9 @@
           "fflo:NaturalAdulterant",
           "fflo:ContaminantAdulterant"
         ],
-        "range": ["fkg:Food"]
+        "range": [
+          "fkg:Food"
+        ]
       }
     ],
     "fflo:commonIn": [
@@ -219,7 +277,9 @@
           "fflo:NaturalAdulterant",
           "fflo:ContaminantAdulterant"
         ],
-        "range": ["fflo:GeographicRegion"]
+        "range": [
+          "fflo:GeographicRegion"
+        ]
       }
     ],
     "fflo:foundAt": [
@@ -243,7 +303,11 @@
     ],
     "fflo:hasFunction": [
       {
-        "domain": ["fflo:FoodAdditive"],
+        "domain": [
+          "fflo:FoodAdditive",
+          "fflo:ProcessingAid",
+          "fflo:Microorganism"
+        ],
         "range": [
           "fflo:AdditiveFunction",
           "fflo:Preservative",
@@ -260,10 +324,27 @@
       }
     ],
     "fkg:hasIngredient": [
-      {"domain": ["fkg:Food"], "range": ["fkg:Ingredient"]}
+      {
+        "domain": [
+          "fkg:Food"
+        ],
+        "range": [
+          "fkg:Ingredient",
+          "fkg:ChemicalIngredient",
+          "fkg:Food",
+          "fflo:Microorganism"
+        ]
+      }
     ],
     "prov:wasInfluencedBy": [
-      {"domain": ["fflo:SpreadEvent"], "range": ["fflo:AdulterationAct"]}
+      {
+        "domain": [
+          "fflo:SpreadEvent"
+        ],
+        "range": [
+          "fflo:AdulterationAct"
+        ]
+      }
     ],
     "fflo:propagatesTo": [
       {
@@ -288,11 +369,20 @@
       }
     ],
     "fflo:carriedBy": [
-      {"domain": ["fflo:SpreadEvent"], "range": ["fkg:Food"]}
+      {
+        "domain": [
+          "fflo:SpreadEvent"
+        ],
+        "range": [
+          "fkg:Food"
+        ]
+      }
     ],
     "fflo:occursAt": [
       {
-        "domain": ["fflo:SpreadEvent"],
+        "domain": [
+          "fflo:SpreadEvent"
+        ],
         "range": [
           "fflo:SupplyChainStep",
           "fflo:Production",
@@ -305,34 +395,102 @@
       }
     ],
     "fflo:inputTo": [
-      {"domain": ["fkg:Food"], "range": ["fflo:TransformationEvent"]}
+      {
+        "domain": [
+          "fkg:Food"
+        ],
+        "range": [
+          "fflo:TransformationEvent"
+        ]
+      }
     ],
     "fflo:outputOf": [
-      {"domain": ["fkg:Food"], "range": ["fflo:TransformationEvent"]}
+      {
+        "domain": [
+          "fkg:Food"
+        ],
+        "range": [
+          "fflo:TransformationEvent"
+        ]
+      }
     ],
     "fso:isPerformedOn": [
-      {"domain": ["fso:Analysis"], "range": ["fso:Sample"]}
+      {
+        "domain": [
+          "fso:Analysis"
+        ],
+        "range": [
+          "fso:Sample"
+        ]
+      }
     ],
     "fso:isPerformedAt": [
-      {"domain": ["fso:Analysis"], "range": ["fso:Laboratory"]}
+      {
+        "domain": [
+          "fso:Analysis"
+        ],
+        "range": [
+          "fso:Laboratory"
+        ]
+      }
     ],
     "fso:isResultOf": [
-      {"domain": ["fso:AnalysisResult"], "range": ["fso:Analysis"]}
+      {
+        "domain": [
+          "fso:AnalysisResult"
+        ],
+        "range": [
+          "fso:Analysis"
+        ]
+      }
     ],
     "fso:relatesToProperty": [
-      {"domain": ["fso:AnalysisResult"], "range": ["ssn:Property"]}
+      {
+        "domain": [
+          "fso:AnalysisResult"
+        ],
+        "range": [
+          "ssn:Property"
+        ]
+      }
     ],
     "fso:isMeasuredIn": [
-      {"domain": ["fso:Measurement"], "range": ["fso:UnitOfMeasure"]}
+      {
+        "domain": [
+          "fso:Measurement"
+        ],
+        "range": [
+          "fso:UnitOfMeasure"
+        ]
+      }
     ],
     "fso:hasSampleType": [
-      {"domain": ["fso:Sample"], "range": ["fso:SampleType"]}
+      {
+        "domain": [
+          "fso:Sample"
+        ],
+        "range": [
+          "fso:SampleType"
+        ]
+      }
     ],
     "fso:hasLocation": [
-      {"domain": ["fso:Sample"], "range": ["fso:Location"]}
+      {
+        "domain": [
+          "fso:Sample"
+        ],
+        "range": [
+          "fso:Location"
+        ]
+      }
     ],
     "fflo:hasNumericValue": [
-      {"domain": ["fso:Measurement"], "range": []}
+      {
+        "domain": [
+          "fso:Measurement"
+        ],
+        "range": []
+      }
     ],
     "fflo:identifies": [
       {
@@ -360,7 +518,9 @@
           "fflo:SurveyAggregated",
           "fflo:RecallTriggered"
         ],
-        "range": ["fkg:Food"]
+        "range": [
+          "fkg:Food"
+        ]
       }
     ],
     "fflo:producedBy": [
@@ -386,7 +546,9 @@
           "fflo:IncidentFinding",
           "fflo:LabConfirmed"
         ],
-        "range": ["fso:AnalysisResult"]
+        "range": [
+          "fso:AnalysisResult"
+        ]
       }
     ],
     "fflo:supportedBy": [
@@ -398,7 +560,9 @@
           "fflo:SurveyAggregated",
           "fflo:RecallTriggered"
         ],
-        "range": ["fflo:EvidenceSource"]
+        "range": [
+          "fflo:EvidenceSource"
+        ]
       }
     ],
     "fflo:foundAtStep": [
@@ -430,7 +594,9 @@
           "fflo:SurveyAggregated",
           "fflo:RecallTriggered"
         ],
-        "range": ["fflo:GeographicRegion"]
+        "range": [
+          "fflo:GeographicRegion"
+        ]
       }
     ],
     "fflo:triggeredAction": [
@@ -442,12 +608,16 @@
           "fflo:SurveyAggregated",
           "fflo:RecallTriggered"
         ],
-        "range": ["fflo:RegulatoryAction"]
+        "range": [
+          "fflo:RegulatoryAction"
+        ]
       }
     ],
     "fflo:collectedAt": [
       {
-        "domain": ["fso:Sample"],
+        "domain": [
+          "fso:Sample"
+        ],
         "range": [
           "fflo:SupplyChainStep",
           "fflo:Production",
@@ -483,7 +653,9 @@
           "fflo:FieldTest",
           "fflo:SensoryTest"
         ],
-        "range": ["fflo:DetectionIndicator"]
+        "range": [
+          "fflo:DetectionIndicator"
+        ]
       }
     ],
     "fflo:requiresKit": [
@@ -494,82 +666,191 @@
           "fflo:FieldTest",
           "fflo:SensoryTest"
         ],
-        "range": ["fflo:DetectionKit"]
+        "range": [
+          "fflo:DetectionKit"
+        ]
       }
     ],
     "fflo:isPerformedAs": [
-      {"domain": ["fflo:LaboratoryTest"], "range": ["fso:Analysis"]}
+      {
+        "domain": [
+          "fflo:LaboratoryTest"
+        ],
+        "range": [
+          "fso:Analysis"
+        ]
+      }
     ],
     "lkif:created_by": [
-      {"domain": ["fflo:FoodStandard"], "range": ["fflo:RegulatoryBody"]}
+      {
+        "domain": [
+          "fflo:FoodStandard"
+        ],
+        "range": [
+          "fflo:RegulatoryBody"
+        ]
+      }
     ],
     "fflo:belongsToCategory": [
-      {"domain": ["fkg:Food"], "range": ["fflo:FoodCategory"]}
+      {
+        "domain": [
+          "fkg:Food"
+        ],
+        "range": [
+          "fflo:FoodCategory"
+        ]
+      }
     ],
     "fflo:appliesToCategory": [
-      {"domain": ["fflo:FoodStandard"], "range": ["fflo:FoodCategory"]}
+      {
+        "domain": [
+          "fflo:FoodStandard"
+        ],
+        "range": [
+          "fflo:FoodCategory"
+        ]
+      }
     ],
     "fflo:hasValue": [
-      {"domain": ["fflo:PermissibleLimit"], "range": ["fso:Measurement"]}
+      {
+        "domain": [
+          "fflo:PermissibleLimit"
+        ],
+        "range": [
+          "fso:Measurement"
+        ]
+      }
     ],
     "fflo:forProperty": [
-      {"domain": ["fflo:PermissibleLimit"], "range": ["ssn:Property"]}
+      {
+        "domain": [
+          "fflo:PermissibleLimit"
+        ],
+        "range": [
+          "ssn:Property"
+        ]
+      }
     ],
     "fflo:comparedAgainst": [
-      {"domain": ["fso:AnalysisResult"], "range": ["fflo:PermissibleLimit"]}
+      {
+        "domain": [
+          "fso:AnalysisResult"
+        ],
+        "range": [
+          "fflo:PermissibleLimit"
+        ]
+      }
     ],
     "fflo:definedIn": [
-      {"domain": ["fflo:FoodStandard"], "range": ["fflo:RegulatoryDocument"]}
+      {
+        "domain": [
+          "fflo:FoodStandard"
+        ],
+        "range": [
+          "fflo:RegulatoryDocument"
+        ]
+      }
     ],
     "fflo:appliesTo": [
       {
-        "domain": ["fflo:PermissibleLimit"],
+        "domain": [
+          "fflo:PermissibleLimit"
+        ],
         "range": [
           "fflo:Adulterant",
           "fflo:SyntheticAdulterant",
           "fflo:NaturalAdulterant",
-          "fflo:ContaminantAdulterant"
+          "fflo:ContaminantAdulterant",
+          "fflo:FoodAdditive",
+          "fflo:ProcessingAid"
         ]
       }
     ],
     "fflo:inFood": [
-      {"domain": ["fflo:PermissibleLimit"], "range": ["fkg:Food"]}
+      {
+        "domain": [
+          "fflo:PermissibleLimit"
+        ],
+        "range": [
+          "fkg:Food"
+        ]
+      }
     ],
     "fflo:specifiedIn": [
       {
-        "domain": ["fflo:PermissibleLimit"],
-        "range": ["fflo:FoodStandard", "fflo:TableReference"]
+        "domain": [
+          "fflo:PermissibleLimit"
+        ],
+        "range": [
+          "fflo:FoodStandard",
+          "fflo:TableReference"
+        ]
       }
     ],
     "fflo:defines": [
       {
-        "domain": ["fflo:RegulatoryDocument"],
-        "range": ["fflo:FoodCategory", "fflo:FoodStandard"]
+        "domain": [
+          "fflo:RegulatoryDocument"
+        ],
+        "range": [
+          "fflo:FoodCategory",
+          "fflo:FoodStandard"
+        ]
       }
     ],
     "fflo:hasPermissibleLimit": [
       {
-        "domain": ["fkg:Food", "fkg:Ingredient"],
-        "range": ["fflo:PermissibleLimit"]
+        "domain": [
+          "fkg:Food",
+          "fkg:Ingredient"
+        ],
+        "range": [
+          "fflo:PermissibleLimit"
+        ]
       }
     ],
     "fflo:appliesToFood": [
       {
-        "domain": ["fflo:FoodStandard", "fflo:RegulatoryDocument"],
-        "range": ["fkg:Food"]
+        "domain": [
+          "fflo:FoodStandard",
+          "fflo:RegulatoryDocument"
+        ],
+        "range": [
+          "fkg:Food"
+        ]
       }
     ],
     "fflo:compliesWith": [
       {
-        "domain": ["fflo:FoodBusinessOperator", "fkg:Food"],
-        "range": ["fflo:FoodStandard", "fflo:RegulatoryDocument"]
+        "domain": [
+          "fflo:FoodBusinessOperator",
+          "fkg:Food"
+        ],
+        "range": [
+          "fflo:FoodStandard",
+          "fflo:RegulatoryDocument"
+        ]
       }
     ],
     "fflo:amends": [
-      {"domain": ["fflo:RegulatoryDocument"], "range": ["fflo:RegulatoryDocument"]}
+      {
+        "domain": [
+          "fflo:RegulatoryDocument"
+        ],
+        "range": [
+          "fflo:RegulatoryDocument"
+        ]
+      }
     ],
     "fflo:hasSubcategory": [
-      {"domain": ["fflo:FoodCategory"], "range": ["fflo:FoodCategory"]}
+      {
+        "domain": [
+          "fflo:FoodCategory"
+        ],
+        "range": [
+          "fflo:FoodCategory"
+        ]
+      }
     ],
     "fflo:hasDefinition": [
       {
@@ -578,23 +859,52 @@
           "fflo:Adulterant",
           "fflo:SyntheticAdulterant",
           "fflo:NaturalAdulterant",
-          "fflo:ContaminantAdulterant"
+          "fflo:ContaminantAdulterant",
+          "fkg:Food",
+          "fkg:Ingredient",
+          "fflo:FoodAdditive",
+          "ssn:Property",
+          "fflo:TableReference",
+          "fflo:SamplingPlan",
+          "fflo:RegulatoryDocument",
+          "fflo:Processing"
         ],
         "range": []
       }
     ],
     "fflo:tableLabel": [
-      {"domain": ["fflo:TableReference"], "range": []}
+      {
+        "domain": [
+          "fflo:TableReference"
+        ],
+        "range": []
+      }
     ],
     "fflo:issuedBy": [
-      {"domain": ["fflo:RegulatoryAction"], "range": ["fflo:RegulatoryBody"]}
+      {
+        "domain": [
+          "fflo:RegulatoryAction"
+        ],
+        "range": [
+          "fflo:RegulatoryBody"
+        ]
+      }
     ],
     "fflo:targets": [
-      {"domain": ["fflo:RegulatoryAction"], "range": ["fkg:Food"]}
+      {
+        "domain": [
+          "fflo:RegulatoryAction"
+        ],
+        "range": [
+          "fkg:Food"
+        ]
+      }
     ],
     "fflo:citesFinding": [
       {
-        "domain": ["fflo:RegulatoryAction"],
+        "domain": [
+          "fflo:RegulatoryAction"
+        ],
         "range": [
           "fflo:IncidentFinding",
           "fflo:LabConfirmed",
@@ -613,11 +923,20 @@
           "fflo:SurveyAggregated",
           "fflo:RecallTriggered"
         ],
-        "range": ["fflo:Violation"]
+        "range": [
+          "fflo:Violation"
+        ]
       }
     ],
     "fflo:violates": [
-      {"domain": ["fflo:Violation"], "range": ["fflo:PermissibleLimit"]}
+      {
+        "domain": [
+          "fflo:Violation"
+        ],
+        "range": [
+          "fflo:PermissibleLimit"
+        ]
+      }
     ],
     "fflo:causesEffect": [
       {
@@ -643,7 +962,9 @@
           "fflo:AcuteEffect",
           "fflo:ChronicEffect"
         ],
-        "range": ["fflo:VulnerablePopulation"]
+        "range": [
+          "fflo:VulnerablePopulation"
+        ]
       }
     ],
     "fflo:hasEffectType": [
@@ -679,7 +1000,9 @@
       {
         "domain": [
           "fflo:FoodBusinessOperator",
-          "fkg:Food"
+          "fkg:Food",
+          "fflo:RegulatoryOfficer",
+          "fflo:RegulatoryBody"
         ],
         "range": [
           "fflo:ObligationType",
@@ -695,14 +1018,29 @@
       }
     ],
     "fflo:hasScientificName": [
-      {"domain": ["fkg:Food", "fkg:Ingredient"], "range": []}
+      {
+        "domain": [
+          "fkg:Food",
+          "fkg:Ingredient"
+        ],
+        "range": []
+      }
     ],
     "fflo:governsSampling": [
-      {"domain": ["fflo:SamplingPlan"], "range": ["fso:SampleType"]}
+      {
+        "domain": [
+          "fflo:SamplingPlan"
+        ],
+        "range": [
+          "fso:SampleType"
+        ]
+      }
     ],
     "fflo:isEmpoweredTo": [
       {
-        "domain": ["fflo:RegulatoryBody"],
+        "domain": [
+          "fflo:RegulatoryBody"
+        ],
         "range": [
           "fflo:RegulatoryActionType",
           "fflo:Seizure",
@@ -714,7 +1052,61 @@
       }
     ],
     "fflo:actsOnBehalfOf": [
-      {"domain": ["fflo:RegulatoryOfficer"], "range": ["fflo:RegulatoryBody"]}
+      {
+        "domain": [
+          "fflo:RegulatoryOfficer"
+        ],
+        "range": [
+          "fflo:RegulatoryBody"
+        ]
+      }
     ]
+  },
+  "subclass_of": {
+    "fflo:SyntheticAdulterant": "fflo:Adulterant",
+    "fflo:NaturalAdulterant": "fflo:Adulterant",
+    "fflo:ContaminantAdulterant": "fflo:Adulterant",
+    "fflo:Microorganism": "fflo:ContaminantAdulterant",
+    "fflo:Preservative": "fflo:AdditiveFunction",
+    "fflo:Antioxidant": "fflo:AdditiveFunction",
+    "fflo:Emulsifier": "fflo:AdditiveFunction",
+    "fflo:Stabilizer": "fflo:AdditiveFunction",
+    "fflo:AcidityRegulator": "fflo:AdditiveFunction",
+    "fflo:FlourTreatmentAgent": "fflo:AdditiveFunction",
+    "fflo:Sequestrant": "fflo:AdditiveFunction",
+    "fflo:HumectantAdditive": "fflo:AdditiveFunction",
+    "fflo:Colourant": "fflo:AdditiveFunction",
+    "fflo:SweeteningAgent": "fflo:AdditiveFunction",
+    "fkg:ChemicalIngredient": "fkg:Ingredient",
+    "fflo:Production": "fflo:SupplyChainStep",
+    "fflo:Processing": "fflo:SupplyChainStep",
+    "fflo:Storage": "fflo:SupplyChainStep",
+    "fflo:Distribution": "fflo:SupplyChainStep",
+    "fflo:Retail": "fflo:SupplyChainStep",
+    "fflo:Import": "fflo:SupplyChainStep",
+    "fflo:LabConfirmed": "fflo:IncidentFinding",
+    "fflo:FieldDetected": "fflo:IncidentFinding",
+    "fflo:SurveyAggregated": "fflo:IncidentFinding",
+    "fflo:RecallTriggered": "fflo:IncidentFinding",
+    "fflo:LaboratoryTest": "fflo:DetectionMethod",
+    "fflo:FieldTest": "fflo:DetectionMethod",
+    "fflo:SensoryTest": "fflo:DetectionMethod",
+    "fflo:Seizure": "fflo:RegulatoryActionType",
+    "fflo:Removal": "fflo:RegulatoryActionType",
+    "fflo:PenaltyReduction": "fflo:RegulatoryActionType",
+    "fflo:Authorization": "fflo:RegulatoryActionType",
+    "fflo:Sealing": "fflo:RegulatoryActionType",
+    "fflo:CausalHealthEffect": "fflo:HealthEffect",
+    "fflo:AcuteEffect": "fflo:CausalHealthEffect",
+    "fflo:ChronicEffect": "fflo:CausalHealthEffect",
+    "fflo:LabelDeclaration": "fflo:ObligationType",
+    "fflo:MarkAffixation": "fflo:ObligationType",
+    "fflo:SignatureRequirement": "fflo:ObligationType",
+    "fflo:PackagingRequirement": "fflo:ObligationType",
+    "fflo:FormFiling": "fflo:ObligationType",
+    "fflo:TestingRequirement": "fflo:ObligationType",
+    "fflo:ConformanceRequirement": "fflo:ObligationType",
+    "fflo:ProductionRequirement": "fflo:ObligationType",
+    "fflo:ProcessingAid": "fflo:FoodAdditive"
   }
 }

@@ -9,57 +9,75 @@ matching the chat-completions call convention used across the codebase.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Schema summary — cached, configurable path
+#
+# NOTE: this now sources schema_config.json directly (the file the schema
+# checker validates against) instead of parsing the extraction prompt's
+# entity/relation table. That table never carried domain/range info, so the
+# judge was previously deciding needs_schema_extension / maps_to_existing /
+# entailed_wrong_types purely off few-shot pattern-matching, disconnected
+# from whatever domain/range the checker was actually enforcing. Reading
+# schema_config.json means the judge and the checker share one source of
+# truth, and schema patches (like the hasDefinition/hasFunction/hasIngredient/
+# appliesTo/hasObligation broadening) show up here automatically on next run
+# with no separate edit needed.
 # ---------------------------------------------------------------------------
 
 _DEFAULT_SCHEMA_PATH = (
     Path(__file__).resolve().parent.parent.parent
-    / "prompts" / "triplet_extraction.txt"
+    / "extraction" / "schema_config.json"
 )
 _schema_cache: dict[str, str] = {}
 
 
-def _trim_schema(raw: str) -> str:
-    """Extract entity-types + relations table from a raw prompt file."""
-    start_marker = "## ENTITY TYPES"
-    end_marker = "## EXTRACTION RULES"
-    start = raw.find(start_marker)
-    end = raw.find(end_marker, start) if start != -1 else -1
-    if start != -1 and end != -1:
-        section = raw[start:end].strip()
-    else:
-        section = raw
+def _format_schema_text(config: dict) -> str:
+    """Render entity types + a compact domain/range table from schema_config.json."""
+    lines: list[str] = []
 
-    lines = section.split("\n")
-    trimmed: list[str] = []
-    for line in lines:
-        if (line.strip().startswith("|")
-                or "fflo:" in line or "fkg:" in line
-                or "fso:" in line or "ssn:" in line
-                or "prov:" in line or "lkif:" in line
-                or "rdf:" in line):
-            trimmed.append(line)
-        elif line.strip().startswith("###") or line.strip().startswith("##"):
-            trimmed.append(line)
-        elif line.strip().startswith("-"):
-            trimmed.append(line)
-    return "\n".join(trimmed).strip()
+    lines.append("### ENTITY TYPES")
+    lines.append(", ".join(config.get("entity_types", [])))
+
+    lines.append("")
+    lines.append("### RELATIONS (domain -> range)")
+    domain_range = config.get("domain_range", {})
+    for relation in config.get("relations", []):
+        specs = domain_range.get(relation)
+        if not specs:
+            lines.append(f"- {relation}: (no domain/range constraint on file)")
+            continue
+        for spec in specs:
+            dom = ", ".join(spec.get("domain", [])) or "any"
+            rng = ", ".join(spec.get("range", [])) or "any"
+            lines.append(f"- {relation}: ({dom}) -> ({rng})")
+
+    return "\n".join(lines).strip()
 
 
 def get_schema_text(schema_path: str | Path | None = None) -> str:
-    """Return the condensed entity-types + relations table.
+    """Return the condensed entity-types + domain/range table.
 
     The result is cached per *schema_path*, so the file is only read once
     per unique path.
     """
     path = str(schema_path or _DEFAULT_SCHEMA_PATH)
     if path not in _schema_cache:
-        raw = Path(path).read_text(encoding="utf-8")
-        _schema_cache[path] = _trim_schema(raw)
+        config = json.loads(Path(path).read_text(encoding="utf-8"))
+        _schema_cache[path] = _format_schema_text(config)
     return _schema_cache[path]
+
+
+def invalidate_schema_cache(schema_path: str | Path | None = None) -> None:
+    """Drop the cached schema text so the next get_schema_text() re-reads
+    from disk. Call this after patching schema_config.json mid-session
+    (e.g. in a long-running service) rather than restarting the process."""
+    if schema_path is None:
+        _schema_cache.clear()
+    else:
+        _schema_cache.pop(str(schema_path), None)
 
 
 # ---------------------------------------------------------------------------
@@ -195,13 +213,11 @@ subject_type="fflo:RegulatoryDocument" predicate="SCHEMA_MISMATCH"
 object="Food Safety Rules 2011"
 object_type="fflo:RegulatoryDocument"
 MISMATCH_NOTE: "amends"
-VERDICT: needs_schema_extension
+VERDICT: maps_to_existing
 CONFIDENCE: 0.95
-RATIONALE: "'amends' is a genuine legal relation between two regulatory
-documents, not in current schema."
-PROPOSED_RELATION: "fflo:amends"
-PROPOSED_DOMAIN: "fflo:RegulatoryDocument"
-PROPOSED_RANGE: "fflo:RegulatoryDocument"
+RATIONALE: "'amends' already exists as fflo:amends
+(RegulatoryDocument -> RegulatoryDocument) in the current schema."
+EXISTING_RELATION: "fflo:amends"
 
 --- EXAMPLE 2 ---
 CHUNK: "de-oiled meal means the residual material left over when oil
@@ -211,13 +227,12 @@ TRIPLET: subject="FSSAI Regulations"
 subject_type="fflo:RegulatoryDocument" predicate="SCHEMA_MISMATCH"
 object="De-oiled meal" object_type="fkg:Ingredient"
 MISMATCH_NOTE: "defines term"
-VERDICT: needs_schema_extension
-CONFIDENCE: 0.9
-RATIONALE: "Text defines a regulated term. No 'defines' relation
-exists in schema."
-PROPOSED_RELATION: "fflo:defines"
-PROPOSED_DOMAIN: "fflo:RegulatoryDocument"
-PROPOSED_RANGE: "rdfs:Resource"
+VERDICT: maps_to_existing
+CONFIDENCE: 0.85
+RATIONALE: "Text defines a regulated term; fflo:hasDefinition now
+covers fkg:Ingredient as a domain, so this maps to an existing
+relation rather than needing an extension."
+EXISTING_RELATION: "fflo:hasDefinition"
 
 --- EXAMPLE 3 ---
 CHUNK: "The oil shall be clear and free from rancidity..."
@@ -249,7 +264,9 @@ def schema_invalid_system(schema_path: str | None = None) -> str:
     return f"""\
 You are an expert validator for a knowledge-graph extraction pipeline.
 The extraction model produced a triplet that FAILED schema validation
-(wrong domain/range, unknown relation, or unknown entity type).
+(wrong domain/range, unknown relation, or unknown entity type) AGAINST
+THE SCHEMA SHOWN BELOW — treat this table as authoritative; it reflects
+the current checker, not an earlier or looser version of the ontology.
 
 Your task: determine whether the triplet is SEMANTICALLY CORRECT
 despite the schema violation — i.e., whether the evidence text actually
@@ -266,11 +283,12 @@ annotations are formally correct.
   subject and object roles should be SWAPPED (the relation arrow
   points the wrong way).
 - "entailed_wrong_types" — The text supports the relation but one or
-  both entity types are incorrect (e.g. RegulatoryDocument instead of
-  FoodStandard, or FoodCategory instead of Food).
+  both entity types are incorrect given the domain/range shown above
+  (e.g. RegulatoryDocument instead of FoodStandard, or FoodCategory
+  instead of Food).
 - "entailed_wrong_relation" — The text supports the relation but the
   predicate is wrong (unknown or misnamed relation).  Suggest the
-  correct one if it exists.
+  correct one if it exists in the schema above.
 - "not_entailed" — The evidence text does NOT actually support the
   claimed relation (fabrication).
 - "uncertain" — Cannot decide confidently.
@@ -291,8 +309,8 @@ VIOLATIONS: domain_mismatch (lkif:created_by expects FoodStandard)
 VERDICT: entailed_wrong_types
 CONFIDENCE: 0.9
 RATIONALE: "Text says government created rules. Semantically correct
-but subject_type should be FoodStandard, not RegulatoryDocument.
-Or the schema should broaden lkif:created_by domain."
+but subject_type should be FoodStandard per the schema's domain for
+lkif:created_by, not RegulatoryDocument."
 
 --- EXAMPLE 2 ---
 CHUNK: "POLYSORBATES | 1,000 mg/kg"
@@ -305,8 +323,9 @@ VIOLATIONS: domain_mismatch, range_mismatch
 VERDICT: entailed_direction_reversed
 CONFIDENCE: 0.85
 RATIONALE: "Relation direction is reversed. Schema says
-PermissibleLimit→appliesTo→Adulterant, but model put
-Adulterant→appliesTo→PermissibleLimit."
+PermissibleLimit -> appliesTo -> (Adulterant/FoodAdditive/
+ProcessingAid), but model put the substance as subject and the
+limit as object."
 
 --- EXAMPLE 3 ---
 CHUNK: "GMP: GMP | Sodium alginate: Sodium carbonate | 401: 500(i)"
@@ -327,7 +346,7 @@ wrong and the extraction is unreliable."
 
 For this branch, also return:
 - "correct_relation" (null or string): the correct relation if you can
-  identify one, or null if none fits
+  identify one in the schema above, or null if none fits
 - "correct_subject_type" (null or string)
 - "correct_object_type" (null or string)
 """

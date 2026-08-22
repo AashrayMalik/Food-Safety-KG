@@ -1,0 +1,502 @@
+@prefix fflo: <https://w3id.org/fflo/ontology#> .
+@prefix fkg: <https://w3id.org/fkg/ontology#> .
+@prefix fso: <https://w3id.org/fso/ontology#> .
+@prefix lkif: <http://www.estrellaproject.org/lkif-core/lkif-core.owl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+lkif:created_by a owl:ObjectProperty ;
+    rdfs:domain fflo:FoodStandard ;
+    rdfs:range fflo:RegulatoryBody .
+
+xsd:decimal a owl:Class .
+
+xsd:string a owl:Class .
+
+prov:used a owl:ObjectProperty ;
+    rdfs:domain fflo:AdulterationAct ;
+    rdfs:range fkg:Food .
+
+prov:wasAssociatedWith a owl:ObjectProperty ;
+    rdfs:domain fflo:AdulterationAct ;
+    rdfs:range fflo:FoodBusinessOperator .
+
+prov:wasAttributedTo a owl:ObjectProperty ;
+    rdfs:domain fflo:IncidentFinding ;
+    rdfs:range fflo:FoodBusinessOperator .
+
+prov:wasGeneratedBy a owl:ObjectProperty ;
+    fflo:hasSignature [ fflo:signatureDomain fflo:SpreadEvent ;
+            fflo:signatureRange fflo:TransformationEvent ],
+        [ fflo:signatureDomain fflo:Adulterant ;
+            fflo:signatureRange fflo:AdulterationAct ] .
+
+prov:wasInfluencedBy a owl:ObjectProperty ;
+    rdfs:domain fflo:SpreadEvent ;
+    rdfs:range fflo:AdulterationAct .
+
+fflo: a owl:Ontology ;
+    rdfs:label "Food Fraud Lifecycle Ontology derived schema" .
+
+fflo:AcidityRegulator a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:AcuteEffect a owl:Class ;
+    rdfs:subClassOf fflo:CausalHealthEffect .
+
+fflo:Antioxidant a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:Assertion a owl:Class .
+
+fflo:Authorization a owl:Class ;
+    rdfs:subClassOf fflo:RegulatoryActionType .
+
+fflo:ChronicEffect a owl:Class ;
+    rdfs:subClassOf fflo:CausalHealthEffect .
+
+fflo:Colourant a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:ConformanceRequirement a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:Distribution a owl:Class ;
+    rdfs:subClassOf fflo:SupplyChainStep .
+
+fflo:Emulsifier a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:FieldDetected a owl:Class ;
+    rdfs:subClassOf fflo:IncidentFinding .
+
+fflo:FieldTest a owl:Class ;
+    rdfs:subClassOf fflo:DetectionMethod .
+
+fflo:FlourTreatmentAgent a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:FormFiling a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:HumectantAdditive a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:Import a owl:Class ;
+    rdfs:subClassOf fflo:SupplyChainStep .
+
+fflo:LabConfirmed a owl:Class ;
+    rdfs:subClassOf fflo:IncidentFinding .
+
+fflo:LabelDeclaration a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:MarkAffixation a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:Microorganism a owl:Class ;
+    rdfs:subClassOf fflo:ContaminantAdulterant .
+
+fflo:NaturalAdulterant a owl:Class ;
+    rdfs:subClassOf fflo:Adulterant .
+
+fflo:PackagingRequirement a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:PenaltyReduction a owl:Class ;
+    rdfs:subClassOf fflo:RegulatoryActionType .
+
+fflo:Preservative a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:Processing a owl:Class ;
+    rdfs:subClassOf fflo:SupplyChainStep .
+
+fflo:ProcessingAid a owl:Class ;
+    rdfs:subClassOf fflo:FoodAdditive .
+
+fflo:Production a owl:Class ;
+    rdfs:subClassOf fflo:SupplyChainStep .
+
+fflo:ProductionRequirement a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:RecallTriggered a owl:Class ;
+    rdfs:subClassOf fflo:IncidentFinding .
+
+fflo:Removal a owl:Class ;
+    rdfs:subClassOf fflo:RegulatoryActionType .
+
+fflo:Retail a owl:Class ;
+    rdfs:subClassOf fflo:SupplyChainStep .
+
+fflo:Sealing a owl:Class ;
+    rdfs:subClassOf fflo:RegulatoryActionType .
+
+fflo:Seizure a owl:Class ;
+    rdfs:subClassOf fflo:RegulatoryActionType .
+
+fflo:SensoryTest a owl:Class ;
+    rdfs:subClassOf fflo:DetectionMethod .
+
+fflo:Sequestrant a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:SignatureRequirement a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:Stabilizer a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:Storage a owl:Class ;
+    rdfs:subClassOf fflo:SupplyChainStep .
+
+fflo:SurveyAggregated a owl:Class ;
+    rdfs:subClassOf fflo:IncidentFinding .
+
+fflo:SweeteningAgent a owl:Class ;
+    rdfs:subClassOf fflo:AdditiveFunction .
+
+fflo:SyntheticAdulterant a owl:Class ;
+    rdfs:subClassOf fflo:Adulterant .
+
+fflo:TestingRequirement a owl:Class ;
+    rdfs:subClassOf fflo:ObligationType .
+
+fflo:actsOnBehalfOf a owl:ObjectProperty ;
+    rdfs:domain fflo:RegulatoryOfficer ;
+    rdfs:range fflo:RegulatoryBody .
+
+fflo:affectsPopulation a owl:ObjectProperty ;
+    rdfs:range fflo:VulnerablePopulation .
+
+fflo:amends a owl:ObjectProperty ;
+    rdfs:domain fflo:RegulatoryDocument ;
+    rdfs:range fflo:RegulatoryDocument .
+
+fflo:appliesTo a owl:ObjectProperty ;
+    rdfs:domain fflo:PermissibleLimit .
+
+fflo:appliesToCategory a owl:ObjectProperty ;
+    rdfs:domain fflo:FoodStandard ;
+    rdfs:range fflo:FoodCategory .
+
+fflo:appliesToFood a owl:ObjectProperty ;
+    rdfs:range fkg:Food .
+
+fflo:assertsObject a owl:AnnotationProperty .
+
+fflo:assertsPredicate a owl:ObjectProperty .
+
+fflo:assertsSubject a owl:ObjectProperty .
+
+fflo:associatedWith a owl:ObjectProperty .
+
+fflo:belongsToCategory a owl:ObjectProperty ;
+    rdfs:domain fkg:Food ;
+    rdfs:range fflo:FoodCategory .
+
+fflo:carriedBy a owl:ObjectProperty ;
+    rdfs:domain fflo:SpreadEvent ;
+    rdfs:range fkg:Food .
+
+fflo:causesEffect a owl:ObjectProperty .
+
+fflo:chunkIndex a owl:AnnotationProperty .
+
+fflo:citesFinding a owl:ObjectProperty ;
+    rdfs:domain fflo:RegulatoryAction .
+
+fflo:collectedAt a owl:ObjectProperty ;
+    rdfs:domain fso:Sample .
+
+fflo:commonIn a owl:ObjectProperty ;
+    rdfs:range fflo:GeographicRegion .
+
+fflo:comparedAgainst a owl:ObjectProperty ;
+    rdfs:domain fso:AnalysisResult ;
+    rdfs:range fflo:PermissibleLimit .
+
+fflo:compliesWith a owl:ObjectProperty .
+
+fflo:confidence a owl:AnnotationProperty .
+
+fflo:confirmedBy a owl:ObjectProperty ;
+    rdfs:range fso:AnalysisResult .
+
+fflo:constitutes a owl:ObjectProperty ;
+    rdfs:range fflo:Violation .
+
+fflo:definedIn a owl:ObjectProperty ;
+    rdfs:domain fflo:FoodStandard ;
+    rdfs:range fflo:RegulatoryDocument .
+
+fflo:defines a owl:ObjectProperty ;
+    rdfs:domain fflo:RegulatoryDocument .
+
+fflo:detectedBy a owl:ObjectProperty .
+
+fflo:evidenceSpan a owl:AnnotationProperty .
+
+fflo:forProperty a owl:ObjectProperty ;
+    rdfs:domain fflo:PermissibleLimit ;
+    rdfs:range ssn:Property .
+
+fflo:foundAt a owl:ObjectProperty .
+
+fflo:foundAtStep a owl:ObjectProperty .
+
+fflo:foundIn a owl:ObjectProperty ;
+    rdfs:range fkg:Food .
+
+fflo:governsSampling a owl:ObjectProperty ;
+    rdfs:domain fflo:SamplingPlan ;
+    rdfs:range fso:SampleType .
+
+fflo:hasAdulterant a owl:ObjectProperty ;
+    rdfs:domain fkg:Food .
+
+fflo:hasAdulterationMethod a owl:ObjectProperty ;
+    rdfs:domain fkg:Food ;
+    rdfs:range fflo:AdulterationMethod .
+
+fflo:hasDefinition a owl:AnnotationProperty .
+
+fflo:hasEffectType a owl:ObjectProperty .
+
+fflo:hasFraudType a owl:ObjectProperty ;
+    rdfs:domain fflo:AdulterationMethod ;
+    rdfs:range fflo:FraudType .
+
+fflo:hasFunction a owl:ObjectProperty .
+
+fflo:hasIntentionality a owl:ObjectProperty ;
+    rdfs:domain fflo:AdulterationMethod ;
+    rdfs:range fflo:IntentionalityLevel .
+
+fflo:hasNumericValue a owl:DatatypeProperty ;
+    rdfs:domain fso:Measurement .
+
+fflo:hasObligation a owl:ObjectProperty .
+
+fflo:hasPermissibleLimit a owl:ObjectProperty ;
+    rdfs:range fflo:PermissibleLimit .
+
+fflo:hasScientificName a owl:AnnotationProperty .
+
+fflo:hasSignature a owl:ObjectProperty .
+
+fflo:hasSubcategory a owl:ObjectProperty ;
+    rdfs:domain fflo:FoodCategory ;
+    rdfs:range fflo:FoodCategory .
+
+fflo:hasValue a owl:ObjectProperty ;
+    rdfs:domain fflo:PermissibleLimit ;
+    rdfs:range fso:Measurement .
+
+fflo:identifies a owl:ObjectProperty .
+
+fflo:inFood a owl:ObjectProperty ;
+    rdfs:domain fflo:PermissibleLimit ;
+    rdfs:range fkg:Food .
+
+fflo:inRegion a owl:ObjectProperty ;
+    rdfs:range fflo:GeographicRegion .
+
+fflo:inputTo a owl:ObjectProperty ;
+    rdfs:domain fkg:Food ;
+    rdfs:range fflo:TransformationEvent .
+
+fflo:isEmpoweredTo a owl:ObjectProperty ;
+    rdfs:domain fflo:RegulatoryBody .
+
+fflo:isPerformedAs a owl:ObjectProperty ;
+    rdfs:domain fflo:LaboratoryTest ;
+    rdfs:range fso:Analysis .
+
+fflo:isSubstituteFor a owl:ObjectProperty ;
+    rdfs:range fkg:Food .
+
+fflo:issuedBy a owl:ObjectProperty ;
+    rdfs:domain fflo:RegulatoryAction ;
+    rdfs:range fflo:RegulatoryBody .
+
+fflo:occursAt a owl:ObjectProperty ;
+    rdfs:domain fflo:SpreadEvent .
+
+fflo:outputOf a owl:ObjectProperty ;
+    rdfs:domain fkg:Food ;
+    rdfs:range fflo:TransformationEvent .
+
+fflo:producedBy a owl:ObjectProperty .
+
+fflo:producesIndicator a owl:ObjectProperty ;
+    rdfs:range fflo:DetectionIndicator .
+
+fflo:propagatesTo a owl:ObjectProperty .
+
+fflo:requiresKit a owl:ObjectProperty ;
+    rdfs:range fflo:DetectionKit .
+
+fflo:signatureDomain a owl:ObjectProperty .
+
+fflo:signatureRange a owl:ObjectProperty .
+
+fflo:snippetId a owl:AnnotationProperty .
+
+fflo:sourceFile a owl:AnnotationProperty .
+
+fflo:sourceId a owl:AnnotationProperty .
+
+fflo:sourceType a owl:AnnotationProperty .
+
+fflo:specifiedIn a owl:ObjectProperty ;
+    rdfs:domain fflo:PermissibleLimit .
+
+fflo:supportedBy a owl:ObjectProperty ;
+    rdfs:range fflo:EvidenceSource .
+
+fflo:tableLabel a owl:AnnotationProperty ;
+    rdfs:domain fflo:TableReference .
+
+fflo:targets a owl:ObjectProperty ;
+    rdfs:domain fflo:RegulatoryAction ;
+    rdfs:range fkg:Food .
+
+fflo:triggeredAction a owl:ObjectProperty ;
+    rdfs:range fflo:RegulatoryAction .
+
+fflo:violates a owl:ObjectProperty ;
+    rdfs:domain fflo:Violation ;
+    rdfs:range fflo:PermissibleLimit .
+
+fkg:ChemicalIngredient a owl:Class ;
+    rdfs:subClassOf fkg:Ingredient .
+
+fkg:hasIngredient a owl:ObjectProperty ;
+    rdfs:domain fkg:Food .
+
+fso:hasLocation a owl:ObjectProperty ;
+    rdfs:domain fso:Sample ;
+    rdfs:range fso:Location .
+
+fso:hasSampleType a owl:ObjectProperty ;
+    rdfs:domain fso:Sample ;
+    rdfs:range fso:SampleType .
+
+fso:isMeasuredIn a owl:ObjectProperty ;
+    rdfs:domain fso:Measurement ;
+    rdfs:range fso:UnitOfMeasure .
+
+fso:isPerformedAt a owl:ObjectProperty ;
+    rdfs:domain fso:Analysis ;
+    rdfs:range fso:Laboratory .
+
+fso:isPerformedOn a owl:ObjectProperty ;
+    rdfs:domain fso:Analysis ;
+    rdfs:range fso:Sample .
+
+fso:isResultOf a owl:ObjectProperty ;
+    rdfs:domain fso:AnalysisResult ;
+    rdfs:range fso:Analysis .
+
+fso:relatesToProperty a owl:ObjectProperty ;
+    rdfs:domain fso:AnalysisResult ;
+    rdfs:range ssn:Property .
+
+fflo:ContaminantAdulterant a owl:Class ;
+    rdfs:subClassOf fflo:Adulterant .
+
+fflo:DetectionIndicator a owl:Class .
+
+fflo:DetectionKit a owl:Class .
+
+fflo:EvidenceSource a owl:Class .
+
+fflo:FoodAdditive a owl:Class .
+
+fflo:FraudType a owl:Class .
+
+fflo:HealthEffect a owl:Class .
+
+fflo:IntentionalityLevel a owl:Class .
+
+fflo:LaboratoryTest a owl:Class ;
+    rdfs:subClassOf fflo:DetectionMethod .
+
+fflo:RegulatoryOfficer a owl:Class .
+
+fflo:SamplingPlan a owl:Class .
+
+fflo:TableReference a owl:Class .
+
+fflo:VulnerablePopulation a owl:Class .
+
+fkg:Ingredient a owl:Class .
+
+fso:Laboratory a owl:Class .
+
+fso:Location a owl:Class .
+
+fso:UnitOfMeasure a owl:Class .
+
+ssn:Property a owl:Class .
+
+fflo:CausalHealthEffect a owl:Class ;
+    rdfs:subClassOf fflo:HealthEffect .
+
+fflo:FoodBusinessOperator a owl:Class .
+
+fflo:GeographicRegion a owl:Class .
+
+fflo:Violation a owl:Class .
+
+fso:SampleType a owl:Class .
+
+fflo:AdulterationMethod a owl:Class .
+
+fflo:DetectionMethod a owl:Class .
+
+fflo:FoodStandard a owl:Class .
+
+fflo:TransformationEvent a owl:Class .
+
+fso:Measurement a owl:Class .
+
+fflo:Adulterant a owl:Class .
+
+fflo:AdulterationAct a owl:Class .
+
+fflo:FoodCategory a owl:Class .
+
+fflo:RegulatoryAction a owl:Class .
+
+fflo:RegulatoryBody a owl:Class .
+
+fflo:RegulatoryDocument a owl:Class .
+
+fflo:SpreadEvent a owl:Class .
+
+fso:Analysis a owl:Class .
+
+fso:AnalysisResult a owl:Class .
+
+fso:Sample a owl:Class .
+
+fflo:IncidentFinding a owl:Class .
+
+fflo:RegulatoryActionType a owl:Class .
+
+fflo:SupplyChainStep a owl:Class .
+
+fflo:ObligationType a owl:Class .
+
+fflo:PermissibleLimit a owl:Class .
+
+fflo:AdditiveFunction a owl:Class .
+
+fkg:Food a owl:Class .
+

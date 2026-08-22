@@ -6,7 +6,7 @@ Reads a ``canonical_map.json`` and resolves ``predicate``,
 
 Usage::
 
-    python src/validation/apply_canonical.py \\
+    python src/validation/unconstrained/apply_canonical.py \\
         --input  nli_llm_judge_entailed.csv \\
         --map    canonical_map.json \\
         --output entailed_canonicalised.csv
@@ -19,7 +19,7 @@ from pathlib import Path
 
 # Import from sibling extraction module
 _here = Path(__file__).resolve().parent
-_ext = _here.parent / "extraction"
+_ext = _here.parent.parent / "extraction"
 if str(_ext) not in sys.path:
     sys.path.insert(0, str(_ext))
 from normalize import load_canonical_map, apply_canonical_map

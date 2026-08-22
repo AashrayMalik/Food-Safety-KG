@@ -13,9 +13,9 @@ threshold, not flagged) plus ``canonical_map_needs_review.json`` and
 
 Usage::
 
-    python src/validation/llm_canonicalise.py \\
-        --report-json  /home/aashray_malik/src/outputs/unconstrained/unconstrained_report.json \\
-        --triplets-csv /home/aashray_malik/src/outputs/unconstrained/nli_llm_judge_entailed.csv \\
+    python src/validation/unconstrained/llm_canonicalise.py \\
+        --report-json  src/outputs/unconstrained/unconstrained_report.json \\
+        --triplets-csv src/outputs/unconstrained/nli_llm_judge_entailed.csv \\
         --base-url     http://localhost:8030/v1 \\
         --model        Qwen/Qwen3.5-27B-FP8 \\
         --api-key      aashray-fflo-local \\

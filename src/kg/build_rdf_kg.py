@@ -31,9 +31,9 @@ except ImportError as exc:  # pragma: no cover - exercised only without deps
     ) from exc
 
 
-DEFAULT_TRIPLETS_CSV = Path("src/outputs/triplets/qwen/triplets_canonicalized.csv")
+DEFAULT_TRIPLETS_CSV = Path("src/outputs/triplets/triplets_canonicalized.csv")
 DEFAULT_SCHEMA_CONFIG = Path("src/extraction/schema_config.json")
-DEFAULT_OUTPUT_DIR = Path("src/outputs/kg/qwen")
+DEFAULT_OUTPUT_DIR = Path("src/outputs/kg_output")
 
 DEFAULT_BASE_IRI = "urn:fflo:resource:"
 DEFAULT_ASSERTION_BASE_IRI = "urn:fflo:assertion:"

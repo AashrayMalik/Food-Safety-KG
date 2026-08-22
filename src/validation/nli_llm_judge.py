@@ -13,13 +13,13 @@ LLM judge takes precedence in the final verdict callout.
 Usage::
 
     python src/validation/nli_llm_judge.py \\
-        --triplets-dir /home/aashray_malik/src/outputs/unconstrained \\
-        --chunks-csv   /home/aashray_malik/src/data/FSSAI_docs/processed/chunks.csv \\
-        --nli-model    /scratch/aashray_malik/checkpoints \\
+        --triplets-dir src/outputs/unconstrained \\
+        --chunks-csv   src/data/FSSAI_docs/processed/chunks.csv \\
+        --nli-model    model_checkpoints/run4_deberta_v3_small \\
         --base-url     http://localhost:8030/v1 \\
         --model        Qwen/Qwen3.5-27B-FP8 \\
         --api-key      aashray-fflo-local \\
-        --output-dir   /home/aashray_malik/src/outputs/unconstrained \\
+        --output-dir   src/outputs/unconstrained \\
         --device       cuda:0
 """
 
@@ -45,7 +45,7 @@ def _get_torch():
 
 def _get_nli_model():
     import sys as _sys
-    _val = Path(__file__).resolve().parent
+    _val = Path(__file__).resolve().parent / "NLI_model"
     if str(_val) not in _sys.path:
         _sys.path.insert(0, str(_val))
     from nli_model import NLIModel
@@ -54,7 +54,7 @@ def _get_nli_model():
 
 def _get_verbalise():
     import sys as _sys
-    _val = Path(__file__).resolve().parent
+    _val = Path(__file__).resolve().parent / "NLI_model"
     if str(_val) not in _sys.path:
         _sys.path.insert(0, str(_val))
     from verbalise import verbalise

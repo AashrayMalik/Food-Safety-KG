@@ -11,8 +11,8 @@ Outputs: canonical CSV, entity map, type conflicts, report.
 Usage::
 
     food_lab/bin/python src/extraction/canonicalise_kg.py \\
-        --input  src/outputs/triplets/qwen/triplets_verified.csv \\
-        --output-dir src/outputs/triplets/qwen/
+        --input  src/outputs/triplets/triplets.csv \\
+        --output-dir src/outputs/triplets/
 """
 
 from __future__ import annotations

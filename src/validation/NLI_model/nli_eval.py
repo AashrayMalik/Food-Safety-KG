@@ -15,14 +15,14 @@ Usage::
 
     # Pretrained vs fine-tuned
     python nli_eval.py \\
-        --models pretrained,/scratch/checkpoints \\
+        --models pretrained,model_checkpoints/run4_deberta_v3_small \\
         --labels pretrained,finetuned \\
         --eval-csv nli_train_pairs.csv \\
         --device cuda:0
 
     # Three models
     python nli_eval.py \\
-        --models pretrained,/scratch/cp500,/scratch/cp1000 \\
+        --models pretrained,model_checkpoints/run4_deberta_v3_small,path/to/cp1000 \\
         --labels pretrained,finetuned-v1,finetuned-v2 \\
         --eval-csv nli_train_pairs.csv \\
         --device cuda:0

@@ -13,12 +13,12 @@ Modes:
 Usage::
 
     # Convert Excel → CSV
-    food_lab/bin/python src/validation/nli_pipeline.py \\
+    food_lab/bin/python src/validation/NLI_model/nli_pipeline.py \\
         --convert-gold src/validation/Golden_val/FFLO_HIL_correction_v6_NLI.xlsx \\
         --output-csv   src/validation/Golden_val/nli_train_pairs.csv
 
     # Pretrained inference (single GPU)
-    food_lab/bin/python src/validation/nli_pipeline.py \\
+    food_lab/bin/python src/validation/NLI_model/nli_pipeline.py \\
         --mode pretrained \\
         --nli-model cross-encoder/nli-deberta-v3-small \\
         --triplets-path src/outputs/triplets/triplets.csv \\
@@ -27,9 +27,9 @@ Usage::
         --batch-size 64 --device cuda:0
 
     # Fine-tuned inference
-    food_lab/bin/python src/validation/nli_pipeline.py \\
+    food_lab/bin/python src/validation/NLI_model/nli_pipeline.py \\
         --mode finetuned \\
-        --nli-model src/models/nli_finetuned/checkpoint-1500 \\
+        --nli-model model_checkpoints/run4_deberta_v3_small \\
         --triplets-path src/outputs/triplets/triplets.csv \\
         --chunks-csv src/data/FSSAI_docs/processed/chunks.csv \\
         --output-dir src/outputs/nli_validation \\

@@ -1,10 +1,22 @@
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from sklearn.preprocessing import MultiLabelBinarizer
 from skmultilearn.model_selection import iterative_train_test_split
 
+_SRC = Path(__file__).resolve().parents[1]
+
 # Load CSV
-df = pd.read_csv("../data/FoodItems/Milk/processed/chunks/milk_dairy_chunks.csv")
+INPUT_CSV = _SRC / "data" / "FoodItems" / "Milk" / "processed" / "chunks" / "milk_dairy_chunks.csv"
+OUTPUT_CSV = _SRC / "data" / "FoodItems" / "Milk" / "processed" / "chunks" / "milk_validation_set.csv"
+
+if not INPUT_CSV.exists():
+    raise FileNotFoundError(
+        f"Input chunks CSV not found: {INPUT_CSV}. "
+        "Run chunk_fooditem_sources.py first to generate it."
+    )
+
+df = pd.read_csv(INPUT_CSV)
 
 # Column containing semicolon-separated labels
 LABEL_COL = "lifecycle_stage_hint"
@@ -30,7 +42,7 @@ X_remaining, Y_remaining, X_sample, Y_sample = iterative_train_test_split(
 sampled_df = df.iloc[X_sample.flatten()]
 
 # Save
-sampled_df.to_csv("../data/FoodItems/Milk/processed/chunks/milk_validation_set.csv", index=False)
+sampled_df.to_csv(OUTPUT_CSV, index=False)
 
 print(f"Original rows: {len(df)}")
 print(f"Sampled rows: {len(sampled_df)}")

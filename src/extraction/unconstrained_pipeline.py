@@ -13,7 +13,7 @@ names entity types and relations based on observed text.  Then:
 Usage::
 
     # Step 1 — Extract unconstrained triplets
-    food_lab/bin/python src/validation/unconstrained_pipeline.py \\
+    food_lab/bin/python src/extraction/unconstrained_pipeline.py \\
         --mode extract \\
         --chunks-csv  src/data/FSSAI_docs/processed/chunks.csv \\
         --output-dir  src/outputs/unconstrained \\
@@ -21,7 +21,7 @@ Usage::
         --concurrency 10
 
     # Step 2 — Normalise + NLI-flag + schema-compare
-    food_lab/bin/python src/validation/unconstrained_pipeline.py \\
+    food_lab/bin/python src/extraction/unconstrained_pipeline.py \\
         --mode flag \\
         --triplets-dir  src/outputs/unconstrained \\
         --chunks-csv    src/data/FSSAI_docs/processed/chunks.csv \\
@@ -47,6 +47,9 @@ _here = Path(__file__).resolve().parent
 _val = _here.parent / "validation"
 if str(_val) not in sys.path:
     sys.path.insert(0, str(_val))
+_nli = _val / "NLI_model"
+if str(_nli) not in sys.path:
+    sys.path.insert(0, str(_nli))
 
 from normalize import normalise_names, canonicalise
 from normalize import save_canonical_map as _save_canonical_map

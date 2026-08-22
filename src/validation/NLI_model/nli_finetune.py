@@ -13,24 +13,24 @@ GPU support:
 Usage::
 
     # Single GPU
-    food_lab/bin/python src/validation/nli_finetune.py \\
+    food_lab/bin/python src/validation/NLI_model/nli_finetune.py \\
         --train-csv    src/validation/Golden_val/nli_train_pairs.csv \\
         --base-model   cross-encoder/nli-deberta-v3-small \\
-        --output-dir   src/models/nli_finetuned \\
+        --output-dir   model_checkpoints/run4_deberta_v3_small \\
         --epochs       5 --batch-size 16 --device cuda:0
 
     # 7-GPU DataParallel
-    food_lab/bin/python src/validation/nli_finetune.py \\
+    food_lab/bin/python src/validation/NLI_model/nli_finetune.py \\
         --train-csv    src/validation/Golden_val/nli_train_pairs.csv \\
         --base-model   cross-encoder/nli-deberta-v3-small \\
-        --output-dir   src/models/nli_finetuned \\
+        --output-dir   model_checkpoints/run4_deberta_v3_small \\
         --epochs       5 --batch-size 16 --device-ids 0,1,2,3,4,5,6
 
     # 7-GPU Distributed (torchrun)
-    torchrun --nproc_per_node=7 src/validation/nli_finetune.py \\
+    torchrun --nproc_per_node=7 src/validation/NLI_model/nli_finetune.py \\
         --train-csv    src/validation/Golden_val/nli_train_pairs.csv \\
         --base-model   cross-encoder/nli-deberta-v3-small \\
-        --output-dir   src/models/nli_finetuned \\
+        --output-dir   model_checkpoints/run4_deberta_v3_small \\
         --epochs       5 --batch-size 16 --distributed
 """
 
@@ -639,7 +639,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--base-model", type=str, default=DEFAULT_MODEL,
                    help=f"Base HF model (default: {DEFAULT_MODEL})")
     p.add_argument("--output-dir", type=str,
-                   default="src/models/nli_finetuned",
+                   default="model_checkpoints/run4_deberta_v3_small",
                    help="Output directory for checkpoints")
     p.add_argument("--epochs", type=int, default=5,
                    help="Number of training epochs")

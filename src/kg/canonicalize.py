@@ -8,11 +8,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 SRC = Path(__file__).resolve().parents[1]
 
-IN_PATH = SRC / "outputs" / "triplets" / "qwen" / "triplets_verified.csv"
-OUT_CSV = SRC / "outputs" / "triplets" / "qwen" / "triplets_verified_canonicalized.csv"
-AUDIT_CSV = SRC / "outputs" / "triplets" / "qwen" / "canonicalization_audit.csv"
-BORDERLINE_CSV = SRC / "outputs" / "triplets" / "qwen" / "canonicalization_borderline_review.csv"
-CROSS_TYPE_AUDIT_CSV = SRC / "outputs" / "triplets" / "qwen" / "canonicalization_cross_type_merges.csv"
+IN_PATH = SRC / "outputs" / "triplets" / "triplets.csv"
+OUT_CSV = SRC / "outputs" / "triplets" / "triplets_canonicalized.csv"
+AUDIT_CSV = SRC / "outputs" / "triplets" / "canonicalization_audit.csv"
+BORDERLINE_CSV = SRC / "outputs" / "triplets" / "canonicalization_borderline_review.csv"
+CROSS_TYPE_AUDIT_CSV = SRC / "outputs" / "triplets" / "canonicalization_cross_type_merges.csv"
 
 SIM_THRESHOLD_AUTO = 1.01   # effectively disabled: nothing merges on similarity alone anymore.
                              # Manual review found false merges the similarity signal could not

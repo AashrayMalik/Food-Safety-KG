@@ -6,13 +6,13 @@ Selenium, cleans both, aggregates into a single markdown file, and produces
 neutral CSV chunks suitable for annotation / downstream NLP.
 
 Usage:
-    food_lab/bin/python src/build_corpus.py \
+    food_lab/bin/python src/preprocessing_cleaning/build_corpus.py \
         --pdf-dir   src/data/FoodItems/Milk/pdfs \
         --links-file src/data/FoodItems/Milk/links.txt \
         --output-dir output/corpus
 
     # Skip scraping if only PDFs are needed:
-    food_lab/bin/python src/build_corpus.py \
+    food_lab/bin/python src/preprocessing_cleaning/build_corpus.py \
         --pdf-dir my_pdfs --output-dir out --skip-scrape
 """
 
@@ -41,7 +41,7 @@ from scrape_links import (  # noqa: E402
     extract_article_text,
     wait_for_captcha,
 )
-from preprocessing_cleaning.chunk_fooditem_sources import (  # noqa: E402
+from chunk_fooditem_sources import (  # noqa: E402
     flatten_markdown_tables,
     normalize_text,
     split_paragraphs,

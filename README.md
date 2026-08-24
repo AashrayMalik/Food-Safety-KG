@@ -164,7 +164,3 @@ food_lab/bin/python src/kg/build_rdf_kg.py \
     --schema-config src/extraction/schema_config.json \
     --output-dir    src/outputs/kg_output
 ```
-
-Full CLI references, output schemas, and retry workflows are documented in
-[`src/documentation/extraction.md`](src/documentation/extraction.md) and
-[`src/documentation/validation.md`](src/documentation/validation.md).

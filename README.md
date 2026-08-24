@@ -18,27 +18,45 @@ with full provenance in Turtle/N-Triples.
 
 ## Pipeline
 
-```
-PDFs + URLs ──► build_corpus.py ──► chunks.csv
-                   │  (markitdown + Selenium + cleaning + chunking)
-                   ▼
-             extract_triplets.py ──► triplets.csv / triplets.jsonl
-                   │  (DeepSeek API or local HuggingFace, schema-guided)
-                   ▼
-      LLM-as-judge + NLI cross-encoder ──► judgments.jsonl / aggregate_report.json
-                   │  (entailment verification, 4 evaluation branches)
-                   ▼
-             canonicalise_kg.py ──► triplets_canonicalized.csv
-                   │  (entity merge → type resolution → triple dedup)
-                   ▼
-             build_rdf_kg.py ──► kg.ttl / kg.nt / ontology.ttl / kg_full.ttl
-                   (RDF/OWL, reified assertions with provenance)
+```mermaid
+flowchart TD
+    subgraph S1["Collection + cleaning"]
+        A1["Collect FSSAI documents"]
+        A2["MarkItDown → CSV chunks"]
+        A3["OCR (tables)"]
+        A1 --> A2 --> A3
+    end
+
+    subgraph S2["LLM extraction"]
+        B1["Constrained extraction<br/>(5-stage FFLO schema)"]
+        B2["Open-domain extraction<br/>(Qwen3.5-27B, no schema)"]
+    end
+
+    subgraph S3["Validation — NLI + judge, run in unison"]
+        C["Every triplet (binary & n-ary)<br/>→ NLI cross-encoder<br/>→ LLM judge (precedence)"]
+    end
+
+    subgraph S4["KG pipeline"]
+        D1["Canonicalization"]
+        D2["RDF KG construction"]
+        D3["GraphDB (planned)"]
+    end
+
+    A3 --> B1
+    A3 --> B2
+    B1 -->|"constrained triples"| C
+    B2 -->|"open-domain triples"| C
+    C -->|"validated triples"| D1
+    D1 --> D2 --> D3
+    C -->|"updated schema"| B1
 ```
 
-A parallel **unconstrained extraction** branch
-(`src/extraction/unconstrained_pipeline.py` + `src/validation/nli_llm_judge.py`)
-runs extraction *without* the schema to discover ontology gaps and propose new
-entity types / relations.
+Stage → implementation:
+
+- **S1** — `src/preprocessing_cleaning/build_corpus.py`
+- **S2** — `src/extraction/extract_triplets.py` (constrained) + `src/extraction/unconstrained_pipeline.py` (open-domain)
+- **S3** — `src/validation/` (NLI cross-encoder + LLM judge)
+- **S4** — `src/extraction/canonicalise_kg.py` + `src/kg/build_rdf_kg.py`
 
 ## Ontology & schema
 
@@ -89,18 +107,21 @@ python3.11 -m venv food_lab
 source food_lab/bin/activate
 
 pip install -r src/requirements.txt
+```
 
-# LLM API key (DeepSeek)
-export DEEPSEEK_API_KEY=...
+Extraction and judging run against **Qwen3.5-27B-FP8** served locally via vLLM
+(OpenAI-compatible API):
+
+```text
+base URL: http://localhost:8030/v1
+model:    Qwen/Qwen3.5-27B-FP8
 ```
 
 Optional runtime deps (all pulled in by `requirements.txt`):
 
-- **Local HF extraction backend**: `torch`, `transformers` (add `bitsandbytes`
-  for 4/8-bit quantisation).
-- **NLI validation**: `sentence-transformers` (the fine-tuned cross-encoder at
-  `model_checkpoints/run4_deberta_v3_small`, 84.4% accuracy on the FFLO
-  validation set).
+- **NLI validation**: `sentence-transformers` (+ `torch`, `transformers`) — the
+  fine-tuned cross-encoder at `model_checkpoints/run4_deberta_v3_small`
+  (84.4% accuracy on the FFLO validation set).
 - **KG serialisation**: `rdflib`.
 - **Web scraping**: `selenium` + a Chrome driver.
 
@@ -115,22 +136,24 @@ food_lab/bin/python src/preprocessing_cleaning/build_corpus.py \
     --pdf-dir   src/data/FSSAI_docs/pdfs \
     --output-dir src/data/FSSAI_docs/processed
 
-# 2. Extract schema-guided triplets (DeepSeek)
+# 2. Extract schema-guided triplets (Qwen via local vLLM)
 food_lab/bin/python src/extraction/extract_triplets.py \
     --chunks-csv  src/data/FSSAI_docs/processed/chunks.csv \
     --prompt-file prompts/triplet_extraction_v2.txt \
     --schema-file src/extraction/schema_config.json \
     --output-dir  src/outputs/triplets \
-    --model       deepseek-v4-flash \
-    --api-key     $DEEPSEEK_API_KEY \
+    --base-url    http://localhost:8030/v1 \
+    --model       Qwen/Qwen3.5-27B-FP8 \
     --resume
 
-# 3. Validate triplets for entailment (LLM-as-judge)
+# 3. Validate triplets for entailment (LLM-as-judge, Qwen)
 food_lab/bin/python src/validation/LLM_judge/judge.py \
     --chunks-csv    src/data/FSSAI_docs/processed/chunks.csv \
     --triplets-dir  src/outputs/triplets \
     --output-dir    src/outputs/validation \
     --schema-file   prompts/triplet_extraction_v2.txt \
+    --judge-model   Qwen/Qwen3.5-27B-FP8 \
+    --base-url      http://localhost:8030/v1 \
     --use-logprobs
 
 # 4. Canonicalise entities and deduplicate triples

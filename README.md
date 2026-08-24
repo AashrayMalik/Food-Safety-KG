@@ -12,9 +12,6 @@ source text using an LLM-as-judge and a fine-tuned NLI cross-encoder,
 canonicalises the resulting entities, and serialises a reified knowledge graph
 with full provenance in Turtle/N-Triples.
 
-> Detailed method docs, CLI references, and results tables live in
-> [`src/documentation/extraction.md`](src/documentation/extraction.md) and
-> [`src/documentation/validation.md`](src/documentation/validation.md).
 
 ## Pipeline
 
@@ -171,9 +168,3 @@ food_lab/bin/python src/kg/build_rdf_kg.py \
 Full CLI references, output schemas, and retry workflows are documented in
 [`src/documentation/extraction.md`](src/documentation/extraction.md) and
 [`src/documentation/validation.md`](src/documentation/validation.md).
-
-## Testing
-
-```bash
-food_lab/bin/python -m unittest src/kg/test_build_rdf_kg.py
-```

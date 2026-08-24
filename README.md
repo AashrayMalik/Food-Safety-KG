@@ -172,16 +172,6 @@ Full CLI references, output schemas, and retry workflows are documented in
 [`src/documentation/extraction.md`](src/documentation/extraction.md) and
 [`src/documentation/validation.md`](src/documentation/validation.md).
 
-## Results (FSSAI corpus)
-
-| Metric | Count |
-|---|---|
-| Chunks processed | 1,586 |
-| Triplets extracted | 7,306 |
-| Judgments produced | 4,267 |
-| Entailed (schema-valid) | 1,354 (60%) |
-| Proposed schema extensions | 565 |
-
 ## Testing
 
 ```bash

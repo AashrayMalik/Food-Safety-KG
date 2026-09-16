@@ -92,6 +92,8 @@ SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 @dataclass(frozen=True)
 class Schema:
+    """Runtime snapshot of the active ontology schema from schema_config.json."""
+
     entity_types: frozenset[str]
     relations: frozenset[str]
     domain_range: dict[str, list[dict[str, list[str]]]]
@@ -102,6 +104,8 @@ class Schema:
 
 @dataclass
 class DriftRow:
+    """A triplet row quarantined for schema drift, with reasons and fixes."""
+
     row: dict[str, str]
     reasons: list[str]
     suggestions: list[str] = field(default_factory=list)
@@ -109,6 +113,8 @@ class DriftRow:
 
 @dataclass
 class BuildResult:
+    """Summary counters produced by a KG build run."""
+
     accepted_rows: int
     drift_rows: list[DriftRow]
     duplicate_statement_triples: int
@@ -117,15 +123,21 @@ class BuildResult:
 
 
 def canonical_qname(value: str) -> str:
+    """Lowercase a QName for case-insensitive lookup keys."""
     return value.strip().lower()
 
 
 def local_name(qname: str) -> str:
+    """Return the part after the prefix colon, or the whole string if unprefixed."""
     match = PREFIX_RE.match(qname.strip())
     return match.group(2) if match else qname.strip()
 
 
 def split_qname(qname: str) -> tuple[str, str]:
+    """Split a prefixed name into ``(prefix, local_name)``.
+
+    Raises ``ValueError`` if the string has no ``prefix:name`` shape.
+    """
     match = PREFIX_RE.match(qname.strip())
     if not match:
         raise ValueError(f"Expected prefixed name, got {qname!r}")
@@ -133,6 +145,7 @@ def split_qname(qname: str) -> tuple[str, str]:
 
 
 def slugify(value: str, default: str = "unnamed") -> str:
+    """Turn a label into a filesystem/IRI-safe kebab-case slug."""
     value = value.strip()
     value = re.sub(r"([a-z])([A-Z])", r"\1-\2", value)
     value = value.lower()
@@ -141,6 +154,7 @@ def slugify(value: str, default: str = "unnamed") -> str:
 
 
 def short_hash(value: str, length: int = 10) -> str:
+    """Deterministic short SHA-1 hex digest for identity disambiguation."""
     return hashlib.sha1(value.encode("utf-8")).hexdigest()[:length]
 
 
@@ -171,11 +185,13 @@ def load_schema(schema_config: Path) -> Schema:
 
 
 def bind_namespaces(graph: Graph) -> None:
+    """Bind all project namespace prefixes to a graph for readable serialisation."""
     for prefix, iri in NAMESPACE_IRIS.items():
         graph.bind(prefix, Namespace(iri))
 
 
 def term_uri(qname: str) -> URIRef:
+    """Resolve a prefixed name to its full ontology IRI."""
     prefix, name = split_qname(qname)
     if prefix not in NAMESPACE_IRIS:
         raise ValueError(f"Unknown namespace prefix {prefix!r} in {qname!r}")
@@ -183,10 +199,12 @@ def term_uri(qname: str) -> URIRef:
 
 
 def is_absolute_iri(value: str) -> bool:
+    """True if *value* already looks like an absolute IRI (has a scheme)."""
     return bool(re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", value.strip()))
 
 
 def join_iri(base_iri: str, *parts: str) -> URIRef:
+    """Join slugified parts onto a base IRI (URN or HTTP style)."""
     clean_parts = [slugify(part) for part in parts if part.strip()]
     if base_iri.startswith("urn:"):
         return URIRef(base_iri.rstrip(":") + ":" + ":".join(clean_parts))
@@ -199,6 +217,13 @@ def make_entity_uri(
     provided_id: str,
     base_iri: str,
 ) -> URIRef:
+    """Build a stable entity IRI from an explicit id or a hashed label.
+
+    When *provided_id* is set, it wins (canonical ``fkg:FOO_00001`` ids
+    are stripped of their ``fkg:`` prefix and joined into the resource
+    base). Otherwise a deterministic IRI is derived from the type and a
+    short hash of the label.
+    """
     if provided_id.strip():
         raw_id = provided_id.strip()
         # Canonical ids are emitted as "fkg:FOO_00001" (a food-KG instance id,
@@ -216,6 +241,7 @@ def make_entity_uri(
 
 
 def literal_from_value(value: str, object_type: str) -> Literal:
+    """Build a typed RDF literal, coercing xsd:decimal where possible."""
     datatype = term_uri(object_type)
     if object_type == "xsd:decimal":
         try:
@@ -334,6 +360,7 @@ def validate_row(
 
 
 def add_ontology_graph(schema: Schema, observed_kinds: dict[str, set[str]]) -> Graph:
+    """Build the TBox (ontology.ttl): classes, subclasses, and property kinds."""
     graph = Graph()
     bind_namespaces(graph)
     ontology = URIRef(NAMESPACE_IRIS["fflo"])
@@ -414,6 +441,10 @@ def add_row_to_graph(
     base_iri: str,
     assertion_base_iri: str,
 ) -> tuple[URIRef, URIRef, URIRef | Literal]:
+    """Add one triplet row to the graph with its Assertion reification.
+
+    Returns the ``(subject, predicate, object)`` URIRef/Literal tuple.
+    """
     subject = make_entity_uri(
         row["subject"], row["subject_type"], row.get("subject_id", ""), base_iri
     )
@@ -476,6 +507,7 @@ def add_row_to_graph(
 
 
 def write_drift_csv(path: Path, drift_rows: list[DriftRow]) -> None:
+    """Write quarantined drift rows (with reasons/suggestions) to CSV."""
     fieldnames = list(REQUIRED_COLUMNS) + ["drift_reasons", "suggestions"]
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -488,6 +520,7 @@ def write_drift_csv(path: Path, drift_rows: list[DriftRow]) -> None:
 
 
 def serialize_graph(graph: Graph, path: Path, fmt: str) -> None:
+    """Serialize a graph to *path* in the given rdflib format."""
     path.write_text(graph.serialize(format=fmt), encoding="utf-8")
 
 
@@ -644,6 +677,7 @@ def build_rdf_kg(
 
 
 def load_to_graph_store(endpoint: str, turtle_path: Path) -> None:
+    """POST a Turtle file to a graph-store endpoint."""
     import requests
 
     response = requests.post(

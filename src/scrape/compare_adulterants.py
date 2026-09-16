@@ -94,6 +94,11 @@ ADULTERANT_SUBS_D = [dedupe(s) for s in ADULTERANT_SUBS]
 
 
 def categorize(param_dedup, dg_dedup):
+    """Classify a scope parameter into a coarse contaminant category.
+
+    Checks (in order) for metal, mycotoxin, residue/contaminant,
+    microorganism, and adulterant keyword matches, defaulting to "other".
+    """
     if METAL_RE.search(param_dedup):
         return "metal"
     if MYCO_RE.search(param_dedup):
@@ -113,6 +118,11 @@ def _key(obj):
 
 
 def load_news_terms(path):
+    """Load news adulterant terms (predicate ``fflo:hasAdulterant``).
+
+    Returns a dedup-keyed dict aggregating associated foods, evidence
+    spans, and article counts per term.
+    """
     terms = {}
     for r in _rows(path):
         if r.get("predicate") != "fflo:hasAdulterant":
@@ -139,6 +149,7 @@ def load_news_terms(path):
 
 
 def load_qwen_terms(path):
+    """Load FSSAI/Qwen adulterant terms into the same dedup-keyed shape."""
     terms = {}
     for r in _rows(path):
         ot = r.get("object_type", "") or ""
@@ -164,6 +175,11 @@ def _rows(path):
 
 # --- scope loading -----------------------------------------------------------
 def load_scope(files):
+    """Load lab scope parameters from CSVs into ``(params, n_labs, materials)``.
+
+    Each parameter is dedup-keyed and enriched with discipline group,
+    category, and the set of TC numbers that test it.
+    """
     params = {}
     all_tcs = set()
     materials = set()
@@ -193,6 +209,7 @@ def load_scope(files):
 
 
 def load_labs(results_path, xlsx_path, sheet):
+    """Load labs from results.csv, joining state from the certificate XLSX."""
     tc_to_state = {}
     try:
         import openpyxl
@@ -220,6 +237,7 @@ def load_labs(results_path, xlsx_path, sheet):
 
 
 def main():
+    """Compare lab scopes vs. news/Qwen adulterants and emit coverage CSVs/JSON."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--news", default=NEWS_PATH)
     ap.add_argument("--qwen", default=QWEN_PATH)

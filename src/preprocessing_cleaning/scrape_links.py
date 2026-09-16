@@ -67,6 +67,7 @@ CAPTCHA_TITLE_RE = re.compile(r"captcha|security check|just a moment|attention r
 
 
 def urls_from_file(path: Path) -> list[str]:
+    """Extract unique URLs from a text file in first-seen order."""
     text = path.read_text(encoding="utf-8", errors="ignore")
     urls: list[str] = []
     seen: set[str] = set()
@@ -79,6 +80,7 @@ def urls_from_file(path: Path) -> list[str]:
 
 
 def safe_filename(url: str, index: int) -> str:
+    """Derive a stable, human-readable output filename from a URL."""
     parsed = urlparse(url)
     host = re.sub(r"^www\.", "", parsed.netloc.lower()) or "url"
     path_part = Path(parsed.path).stem or "index"
@@ -89,6 +91,7 @@ def safe_filename(url: str, index: int) -> str:
 
 
 def build_driver(profile_dir: Path, headless: bool) -> WebDriver:
+    """Launch a Selenium Chrome driver with a persistent profile."""
     if webdriver is None or Options is None:
         raise RuntimeError("Selenium is not installed. Run: python3 -m pip install -r requirements.txt")
 
@@ -111,6 +114,7 @@ def build_driver(profile_dir: Path, headless: bool) -> WebDriver:
 
 
 def page_has_captcha(driver: WebDriver) -> bool:
+    """Heuristically detect a CAPTCHA/security challenge on the current page."""
     for selector in CAPTCHA_SELECTORS:
         for element in driver.find_elements(By.CSS_SELECTOR, selector):
             if element.is_displayed():
@@ -127,6 +131,7 @@ def page_has_captcha(driver: WebDriver) -> bool:
 
 
 def wait_for_captcha(driver: WebDriver, url: str, args: argparse.Namespace) -> None:
+    """Pause for a manual CAPTCHA solve, polling until it clears or times out."""
     if args.no_captcha_pause or not page_has_captcha(driver):
         return
 
@@ -146,6 +151,7 @@ def wait_for_captcha(driver: WebDriver, url: str, args: argparse.Namespace) -> N
 
 
 def clean_article_text(text: str) -> str:
+    """Normalise raw article text: collapse whitespace, drop short/junk lines."""
     lines = []
     junk_patterns = re.compile(
         r"^(advertisement|listen to this article|share this article|follow us|subscribe|sign in|log in|read also|also read)\b",
@@ -174,6 +180,7 @@ def dedupe_preserve_order(lines: list[str]) -> list[str]:
 
 
 def extract_article_text(driver: WebDriver) -> str:
+    """Pull the best article body text using CSS selectors, falling back to <body>."""
     best_text = ""
     for selector in ARTICLE_SELECTORS:
         for element in driver.find_elements(By.CSS_SELECTOR, selector):
@@ -187,6 +194,7 @@ def extract_article_text(driver: WebDriver) -> str:
 
 
 def scrape(args: argparse.Namespace) -> int:
+    """Scrape every URL in the links file and write a scrape manifest CSV."""
     links_file = args.links_file.expanduser().resolve()
     if not links_file.is_file():
         print(f"Not a file: {links_file}", file=sys.stderr)
@@ -246,6 +254,7 @@ def scrape(args: argparse.Namespace) -> int:
 
 
 def write_manifest(manifest_path: Path, rows: list[dict[str, str]]) -> None:
+    """Write scrape results (url/status/output_file/error) to CSV."""
     with manifest_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["url", "status", "output_file", "error"])
         writer.writeheader()

@@ -1,3 +1,10 @@
+"""Unit tests for the RDF knowledge-graph builder.
+
+Covers IRI slugging/joining, schema-drift quarantining, ontology
+subclass axioms, and the provenance vocabulary emitted into kg.ttl /
+ontology.ttl / kg_full.ttl.
+"""
+
 from __future__ import annotations
 
 import csv

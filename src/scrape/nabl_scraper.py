@@ -111,6 +111,7 @@ def normalize_pdf_url(url):
 
 
 def process_one_requests(session, tc_number, lab_name):
+    """Resolve one TC number's Integrated Certificate URL via ASP.NET postbacks."""
     # 1) load search page, capture viewstate/cookies
     r = session.get(SEARCH_URL, timeout=60)
     r.raise_for_status()
@@ -147,6 +148,7 @@ def process_one_requests(session, tc_number, lab_name):
 # Selenium flow (default)
 # ---------------------------------------------------------------------------
 def build_driver(profile_dir, headless):
+    """Launch a Selenium Chrome driver for the NABL lookup."""
     from selenium import webdriver
 
     profile_dir = os.path.abspath(profile_dir)
@@ -163,6 +165,7 @@ def build_driver(profile_dir, headless):
 
 
 def process_one_browser(driver, tc_number, lab_name, wait_s=15):
+    """Resolve one TC number's Integrated Certificate URL via Selenium."""
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
@@ -214,6 +217,7 @@ def process_one_browser(driver, tc_number, lab_name, wait_s=15):
 # shared helpers
 # ---------------------------------------------------------------------------
 def load_targets(xlsx_path, sheet):
+    """Read (TC number, lab name) pairs from the certificate XLSX sheet."""
     wb = openpyxl.load_workbook(xlsx_path, data_only=True)
     ws = wb[sheet]
     headers = [c.value for c in ws[1]]
@@ -229,6 +233,7 @@ def load_targets(xlsx_path, sheet):
 
 
 def load_done(log_path):
+    """Return the set of TC numbers already marked 'ok' in the log."""
     done = set()
     if os.path.exists(log_path):
         with open(log_path, newline="") as f:
@@ -239,6 +244,7 @@ def load_done(log_path):
 
 
 def append_log(log_path, row, write_header):
+    """Append one result row to the log CSV, writing a header if requested."""
     with open(log_path, "a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["tc_number", "lab_name", "status", "pdf_url", "error"])
         if write_header:
@@ -247,6 +253,7 @@ def append_log(log_path, row, write_header):
 
 
 def main():
+    """Resolve Integrated Certificate URLs for all TC numbers in the XLSX."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", help="xlsx file with TC numbers")
     ap.add_argument("--sheet", help="sheet name in --input")

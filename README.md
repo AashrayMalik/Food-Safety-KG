@@ -86,9 +86,10 @@ Namespaces used throughout: `fflo`, `fkg`, `fso`, `ssn`, `sosa`, `prov`,
 │   ├── preprocessing_cleaning/   # PDF→markdown, URL scraping, cleaning, chunking
 │   ├── extraction/               # triplet extraction, schema validation, canonicalisation
 │   ├── validation/               # LLM-as-judge, NLI model, unconstrained validation
-│   ├── kg/                       # RDF/OWL KG builder + unit tests
+│   ├── kg/                       # canonical entity IDs + RDF/OWL KG builder + unit tests
+│   ├── scrape/                   # NABL lab-scope scraping + adulterant gap analysis
 │   ├── schema_iterations/        # canonical ontology specs (v2, v3)
-│   ├── documentation/            # detailed pipeline docs (extraction.md, validation.md)
+│   ├── documentation/            # detailed pipeline docs (extraction, validation, kg, scrape)
 │   ├── outputs/                  # triplets + KG output (kg.ttl, ontology.ttl, …)
 │   └── requirements.txt
 ├── prompts/                      # extraction + unconstrained system prompts
@@ -124,6 +125,19 @@ Optional runtime deps (all pulled in by `requirements.txt`):
 
 Input data (`src/data/` — FSSAI PDFs and processed chunks) is **not** checked
 into the repo; the pipeline expects you to supply it.
+
+## Adulterant gap analysis
+
+Separate from the main KG pipeline, `src/scrape/` analyses the coverage gap
+between **NABL-accredited lab test scopes** and **news-reported adulterants** —
+"what the news surfaces but no accredited lab tests for". It scrapes Integrated
+Certificate PDF URLs from the NABL portal, then compares lab scope parameters
+against news/Qwen adulterant terms (substring matching and, optionally,
+embedding similarity), emitting coverage CSVs and the JSON that powers the
+adulterant-comparison page of the observatory website.
+
+See [`src/documentation/scrape.md`](src/documentation/scrape.md) for the full
+workflow, inputs, and outputs.
 
 ## End-to-end quickstart
 

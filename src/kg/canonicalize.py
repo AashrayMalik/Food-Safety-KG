@@ -1,3 +1,14 @@
+"""Assign canonical entity IDs to extracted triplet rows.
+
+Groups surface-form variants of the same real-world entity (blocked by
+type) using exact normalised matches plus char n-gram similarity, with
+guards against false merges (conflicting numeric values, leading
+qualifiers, and similarity-prone measurement types). Also passes through
+existing event-reification IDs and applies a cross-type exact-match merge
+for extraction-time type-labeling inconsistency. Writes a canonicalised
+CSV plus audit files for borderline and cross-type merges.
+"""
+
 import csv, re, sys
 from collections import defaultdict
 from pathlib import Path

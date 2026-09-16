@@ -180,6 +180,7 @@ def run_inference(
 def _save_verdicts(
     results: list[dict[str, Any]], output_jsonl: Path,
 ) -> None:
+    """Write per-triplet verdict dicts as one JSON object per line."""
     output_jsonl.parent.mkdir(parents=True, exist_ok=True)
     with output_jsonl.open("w", encoding="utf-8") as f:
         for r in results:
@@ -190,6 +191,7 @@ def _save_verdicts(
 def _save_summary(
     results: list[dict[str, Any]], output_path: Path,
 ) -> None:
+    """Write aggregate verdict counts (overall and per predicate) to JSON."""
     verdict_counter = Counter(r["nli_verdict"] for r in results)
     pred_counter: dict[str, Counter] = {}
     for r in results:

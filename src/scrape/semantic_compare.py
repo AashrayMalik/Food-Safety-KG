@@ -95,6 +95,7 @@ def resolve_to_news(term, news_by_key):
 
 
 def main():
+    """Embed news/Qwen terms and scope params, then audit coverage by similarity."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--news", default=NEWS_PATH)
     ap.add_argument("--qwen", default=QWEN_PATH)

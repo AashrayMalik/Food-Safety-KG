@@ -1,3 +1,10 @@
+"""Split milk/dairy chunks into a stratified validation set.
+
+Samples 25% of chunk rows for manual annotation using iterative
+train/test stratification on the multi-label ``lifecycle_stage_hint``
+column, so each lifecycle stage is proportionally represented.
+"""
+
 import pandas as pd
 import numpy as np
 from pathlib import Path

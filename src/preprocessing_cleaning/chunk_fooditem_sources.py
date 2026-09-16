@@ -168,6 +168,7 @@ def chunk_paragraphs(
     max_words: int,
     min_words: int,
 ) -> list[str]:
+    """Greedily pack paragraphs into word-bounded chunks, splitting oversized ones."""
     chunks: list[str] = []
     current: list[str] = []
     current_words = 0
@@ -213,6 +214,7 @@ def chunk_paragraphs(
 # ---------------------------------------------------------------------------
 
 def source_type_for(path: Path) -> str:
+    """Classify a source file into a coarse source-type label by name/suffix."""
     name = path.name.lower()
     if "report" in name or "survey" in name or "fssai" in name or "nmqs" in name:
         return "regulatory_report"
@@ -224,6 +226,7 @@ def source_type_for(path: Path) -> str:
 
 
 def matched_stages(text: str) -> list[str]:
+    """Return lifecycle stages whose keywords appear in the text."""
     lower = text.lower()
     stages = []
     for stage, keywords in LIFECYCLE_KEYWORDS.items():
@@ -233,6 +236,7 @@ def matched_stages(text: str) -> list[str]:
 
 
 def matched_food_terms(text: str) -> list[str]:
+    """Return milk/dairy terms present in the text (word-boundary match)."""
     lower = text.lower()
     return [term for term in MILK_DAIRY_TERMS if re.search(rf"\b{re.escape(term)}\b", lower)]
 
@@ -242,11 +246,13 @@ def csv_safe_text(text: str) -> str:
 
 
 def source_id(index: int, path: Path) -> str:
+    """Build a stable source identifier like ``milk_pdfmd_001`` from index/path."""
     prefix = "pdfmd" if path.suffix.lower() == ".md" else "txt"
     return f"milk_{prefix}_{index:03d}"
 
 
 def iter_sources(food_dir: Path) -> list[Path]:
+    """Discover source files (markdown + text) under a food-item directory."""
     markdown_dir = food_dir / "processed" / "markdown"
     sources = sorted(markdown_dir.glob("*.md")) if markdown_dir.exists() else []
     sources.extend(
@@ -269,6 +275,7 @@ def iter_sources(food_dir: Path) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    """Chunk all sources under --food-dir and write chunk CSV + aggregate Markdown."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--food-dir", type=Path,

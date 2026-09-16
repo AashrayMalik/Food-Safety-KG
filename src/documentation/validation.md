@@ -1,9 +1,27 @@
-# Entailment Validation Pipeline (LLM-as-Judge)
+# Entailment Validation (`src/validation/`)
 
-Grades the quality of extracted knowledge-graph triplets by using a second LLM
-to judge whether each triplet is entailed by its source text.  Routes every item
-into one of four evaluation branches, each with its own judging criteria and
-few-shot prompt, and produces per-branch verdicts plus an aggregate report.
+Grades the quality of extracted triplets by checking whether each one is
+entailed by its source text. Three complementary approaches live here:
+
+1. **LLM-as-judge** (`LLM_judge/judge.py`) — a second LLM routes every item
+   into one of four branches and assigns a structured verdict.
+2. **NLI cross-encoder** (`NLI_model/`) — a fine-tuned
+   `cross-encoder/nli-deberta-v3-small` scores entailment/contradiction/neutral
+   and can be fine-tuned and evaluated on held-out data.
+3. **Two-stage NLI + LLM judge** (`nli_llm_judge.py`) — runs chunk-level and
+   span-level NLI, then a Qwen judge resolves the final verdict; disagreements
+   are flagged for human review.
+
+The `unconstrained/` subfolder adds LLM-driven canonicalisation of the
+open-domain extraction output.
+
+---
+
+# 1. LLM-as-Judge (`LLM_judge/judge.py`)
+
+Uses a second LLM to judge each triplet against its source chunk. Routes every
+item into one of four evaluation branches, each with its own criteria and
+few-shot prompt, and writes per-branch verdicts plus an aggregate report.
 
 ## Architecture
 
@@ -12,25 +30,15 @@ triplets.jsonl ──→  classify_items()  ──→  4 branches
 failures.jsonl              │
 violations.jsonl            │
                             ▼
-  ┌──────────┬───────────────┬──────────────────┬────────────────┐
-  │          │               │                  │                │
-  ▼          ▼               ▼                  ▼                ▼
-zero_triplet  schema_mismatch  schema_invalid    schema_valid     hard_failures
-   │            │                │                 │               
-   ▼            ▼                ▼                 ▼
-LLM judge    LLM judge        LLM judge         LLM judge
-   │            │                │                 │
-   └────────────┴────────────────┴─────────────────┘
+  ┌──────────┬───────────────┬──────────────────────┬────────────────────┐
+  ▼          ▼               ▼                      ▼                    ▼
+zero_triplet  schema_mismatch  schema_invalid_triplet  schema_valid_triplet  hard_failures
+   │            │                │                      │
+   └────────────┴────────────────┴──────────────────────┘
                             │
                             ▼
                   4 × judgments.jsonl  +  aggregate_report.json
 ```
-
-Each branch has its own system prompt with:
-- Condensed FFLO schema (entity types + relations with domain/range)
-- Branch-specific judging criteria
-- 2-3 few-shot examples
-- Structured JSON output format enforced via `response_format: json_object`
 
 ## The four branches
 
@@ -41,35 +49,28 @@ Judges chunks where the extraction model produced zero triplets.
 | Verdict | Meaning |
 |---|---|
 | `correct_zero` | The chunk truly contains no entity-entity relations |
-| `missed_relation` | The extraction model SHOULD have produced triplets but did not |
+| `missed_relation` | The model SHOULD have produced triplets but did not |
 | `out_of_schema_only` | A meaningful relation exists but no current schema relation can express it |
 | `uncertain` | Cannot decide |
 
-**Why this matters**: Tells you whether 598 zero-triplet chunks are acceptable
-(84% were — mostly category-code lists and version metadata) or whether the
-extraction model is missing content (59 chunks had missed relations).
-
 ### 2. Schema-mismatch
 
-Judges triplets where the model deliberately output `predicate: "SCHEMA_MISMATCH"`
-with a `mismatch_note`.
+Judges triplets where the model deliberately output `predicate: "SCHEMA_MISMATCH"`.
 
 | Verdict | Meaning |
 |---|---|
-| `needs_schema_extension` | The text genuinely supports a relation not in the schema — proposes a new relation with domain/range |
-| `maps_to_existing` | The relation actually maps to an existing schema relation — the model made an error |
+| `needs_schema_extension` | Text supports a relation not in the schema — proposes a new relation with domain/range |
+| `maps_to_existing` | The relation maps to an existing schema relation — the model made an error |
 | `unsupported` | The evidence text does not support the claimed relation |
 | `malformed` | The extraction is garbled |
 
-**Why this matters**: Produces a ranked list of candidate schema additions.
-565 genuine new relations were identified across the FSSAI dataset, including
-`fflo:hasFunction`, `fflo:hasSubCategory`, `fflo:amends`, `fflo:defines`,
-and `fflo:compliesWith`.
+This branch produces a ranked list of candidate schema additions (e.g.
+`fflo:hasFunction`, `fflo:hasSubcategory`, `fflo:amends`, `fflo:defines`,
+`fflo:compliesWith`).
 
 ### 3. Schema-invalid
 
-Judges ordinary triplets that failed schema validation (wrong domain/range,
-unknown relation, or unknown entity type).
+Judges ordinary triplets that failed schema validation.
 
 | Verdict | Meaning |
 |---|---|
@@ -79,145 +80,93 @@ unknown relation, or unknown entity type).
 | `not_entailed` | Text does not support the relation at all |
 | `uncertain` | Cannot decide |
 
-**Why this matters**: Separates fixable schema errors from genuine fabrications.
-Of 738 schema-invalid triplets, 589 are semantically correct but structurally
-wrong (reversible via prompt improvement).  145 are genuinely not supported.
-
 ### 4. Schema-valid
 
-Judges triplets that passed ALL schema checks — the main entailment branch.
+Judges triplets that passed all schema checks — the main entailment branch.
 
 | Verdict | Meaning |
 |---|---|
 | `entailed` | All parts of the triplet are explicitly stated in the text |
-| `partially_entailed` | Plausible but requires one inferential step beyond what is stated |
-| `not_entailed` | Fabricated or over-extrapolated from the text |
+| `partially_entailed` | Plausible but requires one inferential step |
+| `not_entailed` | Fabricated or over-extrapolated |
 | `uncertain` | Cannot decide |
 
-**Auxiliary checks** (reported for every entailed/partially-entailed triplet):
+**Auxiliary checks** (reported for entailed/partially-entailed triplets):
 
 | Check | Values |
 |---|---|
-| `evidence_span_exact` | `true` / `false` / `partial` — is the cited span verbatim in the text? |
-| `entity_types_correct` | `true` / `false` — are subject_type and object_type appropriate? |
-| `direction_correct` | `true` / `false` — does the relation arrow point the right way? |
+| `evidence_span_exact` | `true` / `false` / `partial` |
+| `entity_types_correct` | `true` / `false` |
+| `direction_correct` | `true` / `false` |
 | `confidence_reasonable` | `yes` / `no` / `overconfident` / `underconfident` |
 
 ## Logprob confidence scoring
 
-When run with `--use-logprobs`, the judge requests token-level log-probabilities
-from the DeepSeek API.  These provide an **objective** confidence signal that
-complements the model's self-reported `judge_confidence`:
+With `--use-logprobs`, the judge requests token-level log-probabilities to
+compute an **objective** confidence signal alongside the model's self-reported
+`judge_confidence`:
 
 | Field | Meaning |
 |---|---|
-| `verdict_logprob` | Cumulative log-probability of the tokens forming the verdict value (e.g., -0.45 for "entailed") — closer to 0 = more certain |
+| `verdict_logprob` | Cumulative log-prob of the tokens forming the verdict value (closer to 0 = more certain) |
 | `total_logprob` | Sum of all output token logprobs |
 | `avg_logprob` | Per-token average |
 | `output_perplexity` | `exp(-avg_logprob)` — lower = more certain |
 
-The aggregate report flags **overconfident judgments**: cases where the model
-self-reports high confidence but the token logprobs show it was actually
-uncertain.  These are high-priority for manual audit.
-
-## Chunk CSV Requirements
-
-The judge re-reads the same chunk CSV used during extraction.  It only accesses
-two columns:
-
-| Column | Why the judge needs it |
-|---|---|
-| `snippet_id` | Joins judgment records back to specific chunks.  Every verdict references this ID so you can trace a finding back to the exact paragraph. |
-| `evidence_text` | The full text shown to the judge for entailment verification.  The judge sees the entire chunk (not just the extracted `evidence_span`) to determine whether the triplet is genuinely supported. |
-
-The remaining columns (`source_id`, `chunk_index`, `source_file`, `source_type`)
-are ignored by the judge — it only needs to retrieve text by `snippet_id`.
-
-**Important**: The chunk CSV must be the same one used during extraction.
+The report flags **overconfident judgments** (high self-reported confidence but
+low token logprobs) for manual audit.
 
 ## Schema file
 
-The judge reads entity types and relations from an extraction prompt file to
-provide schema context in its system prompts.  By default it uses
-`prompts/triplet_extraction.txt` (FFLO v6 schema).  For v7 extractions, point at
-`prompts/triplet_extraction_v2.txt`.  This should match the `--prompt-file` you
-used during extraction:
+The judge reads entity types, relations, and domain/range directly from the
+schema JSON config (`src/extraction/schema_config.json`), so the judge and the
+schema checker share one source of truth. Override with `--schema-file` (a JSON
+config, not a prompt file).
 
-```bash
-# v7 schema extraction → v7 judgment
-food_lab/bin/python src/validation/judge.py \
-    --chunks-csv    src/data/FSSAI_docs/processed/chunks.csv \
-    --triplets-dir  src/outputs/triplets \
-    --output-dir    src/outputs/validation \
-    --schema-file   prompts/triplet_extraction_v2.txt
-```
+## Chunk CSV Requirements
 
-The schema is cached per path, so the file is only read once even when
-thousands of judgments are produced.
-Using a different CSV (or one with renamed columns) will produce empty
-`evidence_text` for every judgment, rendering all verdicts meaningless — the
-judge would have no text to verify entailment against.
-
-The judge is dataset-agnostic: point `--triplets-dir` and `--chunks-csv` at any
-food item's extraction results and it works without changes.  It auto-derives a
-`csv_id` from the chunks CSV path to namespace its output directory.
+The judge re-reads the same chunk CSV used during extraction and only accesses
+two columns: `snippet_id` (joins verdicts back to chunks) and `evidence_text`
+(the full text shown for entailment verification). It must be the **same** CSV
+used during extraction.
 
 ## Quick Start
 
 ```bash
-food_lab/bin/python src/validation/judge.py \
+food_lab/bin/python src/validation/LLM_judge/judge.py \
     --chunks-csv    src/data/FSSAI_docs/processed/chunks.csv \
     --triplets-dir  src/outputs/triplets \
     --output-dir    src/outputs/validation \
-    --judge-model   deepseek-v4-pro \
+    --judge-model   Qwen/Qwen3.5-27B-FP8 \
+    --base-url      http://localhost:8030/v1 \
     --api-key       $DEEPSEEK_API_KEY \
     --use-logprobs \
     --concurrency   8
 ```
 
-### Resume after interruption
+### Resume / retry
 
 ```bash
-food_lab/bin/python src/validation/judge.py \
-    --chunks-csv    src/data/FSSAI_docs/processed/chunks.csv \
-    --triplets-dir  src/outputs/triplets \
-    --output-dir    src/outputs/validation \
-    --judge-model   deepseek-v4-pro \
-    --api-key       $DEEPSEEK_API_KEY \
-    --use-logprobs \
-    --resume
+# resume from the most recent run directory
+... --resume
+
+# strip judge_error entries and re-judge only those
+... --retry-failures
 ```
-
-### Retry failed judgments only
-
-```bash
-food_lab/bin/python src/validation/judge.py \
-    --chunks-csv    src/data/FSSAI_docs/processed/chunks.csv \
-    --triplets-dir  src/outputs/triplets \
-    --output-dir    src/outputs/validation \
-    --judge-model   deepseek-v4-pro \
-    --api-key       $DEEPSEEK_API_KEY \
-    --retry-failures
-```
-
-`--retry-failures` strips all `judge_error` entries from the most recent run
-directory, then resumes — only the previously-failed items get re-judged.
 
 ## Output
 
 ```
-src/outputs/validation/fssai_docs/deepseek-v4-pro/run_YYYYMMDD_HHMMSS/
-├── zero_triplet_judgments.jsonl        # One line per zero-triplet chunk
-├── schema_mismatch_judgments.jsonl     # One line per SCHEMA_MISMATCH triplet
-├── schema_invalid_judgments.jsonl      # One line per schema-invalid triplet
-├── schema_valid_judgments.jsonl        # One line per schema-valid triplet
-└── aggregate_report.json               # Summary with verdict distributions,
-                                        # top proposed schema extensions,
-                                        # evidence_span stats,
-                                        # logprob calibration
+src/outputs/validation/{csv_id}/{judge_model}/run_YYYYMMDD_HHMMSS/
+├── zero_triplet_judgments.jsonl        # one line per zero-triplet chunk
+├── schema_mismatch_judgments.jsonl     # one line per SCHEMA_MISMATCH triplet
+├── schema_invalid_judgments.jsonl      # one line per schema-invalid triplet
+├── schema_valid_judgments.jsonl        # one line per schema-valid triplet
+└── aggregate_report.json               # verdict distributions, proposed extensions,
+                                        # evidence_span stats, logprob calibration
 ```
 
-### Judgment JSON format (common fields)
+### Judgment JSON (common fields)
 
 ```json
 {
@@ -227,7 +176,6 @@ src/outputs/validation/fssai_docs/deepseek-v4-pro/run_YYYYMMDD_HHMMSS/
   "subject": "Paneer",
   "predicate": "fflo:belongsToCategory",
   "object": "UnripenedCheese",
-  "evidence_span": "paneer (milk protein coagulated by the addition of citric acid",
   "judge_verdict": "entailed",
   "judge_confidence": 0.95,
   "judge_rationale": "Text lists paneer under unripened cheese",
@@ -243,54 +191,6 @@ src/outputs/validation/fssai_docs/deepseek-v4-pro/run_YYYYMMDD_HHMMSS/
 }
 ```
 
-### Schema-mismatch example (with proposed extension)
-
-```json
-{
-  "branch": "schema_mismatch",
-  "subject": "Amendment Rules, 2017",
-  "predicate": "SCHEMA_MISMATCH",
-  "object": "Food Safety Rules, 2011",
-  "judge_verdict": "needs_schema_extension",
-  "proposed_relation": "fflo:amends",
-  "proposed_domain": "fflo:RegulatoryDocument",
-  "proposed_range": "fflo:RegulatoryDocument"
-}
-```
-
-### Aggregate report structure
-
-```json
-{
-  "hard_failures": 0,
-  "branches": {
-    "zero_triplet": {
-      "verdicts": {"correct_zero": 504, "missed_relation": 59, ...},
-      "ok": 597, "failed": 1
-    },
-    "schema_mismatch": {
-      "verdicts": {"needs_schema_extension": 565, "unsupported": 46, ...},
-      "top_proposed_relations": [
-        ["fflo:hasFunction", 58],
-        ["fflo:hasSubCategory", 42],
-        ["fflo:amends", 34],
-        ...
-      ]
-    },
-    "schema_valid_triplet": {
-      "verdicts": {"entailed": 1354, "not_entailed": 399, "partially_entailed": 488},
-      "evidence_span_exact_dist": {"True": 1500, "False": 200, "partial": 546},
-      "confidence_reasonable_dist": {"yes": 1600, "overconfident": 400, "underconfident": 246}
-    }
-  },
-  "global_summary": {
-    "total_judged_ok": 4256,
-    "total_failed": 11,
-    "verdict_distribution": {...}
-  }
-}
-```
-
 ## CLI Reference
 
 | Flag | Default | Description |
@@ -298,7 +198,7 @@ src/outputs/validation/fssai_docs/deepseek-v4-pro/run_YYYYMMDD_HHMMSS/
 | `--chunks-csv` | *(required)* | Chunk CSV used for extraction |
 | `--triplets-dir` | *(required)* | Directory with `triplets.jsonl`, `failures.jsonl`, `schema_violations.jsonl` |
 | `--output-dir` | *(required)* | Root directory for validation outputs |
-| `--judge-model` | `deepseek-chat` | LLM model to use as judge |
+| `--judge-model` | `deepseek-v4-Pro` | LLM model used as judge |
 | `--api-key` | `$DEEPSEEK_API_KEY` | API key |
 | `--base-url` | `https://api.deepseek.com` | API base URL |
 | `--concurrency` | `8` | Max concurrent LLM calls |
@@ -306,69 +206,156 @@ src/outputs/validation/fssai_docs/deepseek-v4-pro/run_YYYYMMDD_HHMMSS/
 | `--resume` | `False` | Resume from the most recent run directory |
 | `--retry-failures` | `False` | Strip `judge_error` entries and re-judge only those |
 | `--use-logprobs` | `False` | Request token log-probabilities for objective confidence scoring |
-| `--schema-file` | `prompts/triplet_extraction.txt` | Path to the extraction prompt file containing entity types and relations |
+| `--schema-file` | *(auto)* | Path to schema JSON config (default: auto-detected `schema_config.json`) |
 | `--csv-id` | *(auto)* | Dataset identifier (auto-derived from CSV path) |
-
-## FSSAI Results (4,267 judgments — v6 schema)
-
-| Branch | Items | Key findings |
-|---|---|---|
-| zero_triplet | 598 | 504 correct (84%), 59 missed |
-| schema_mismatch | 685 | 565 needs extension, 53 maps to existing, 46 unsupported |
-| schema_invalid | 738 | 280 wrong relation, 187 wrong types, 122 direction reversed, 145 not entailed |
-| schema_valid | 2,246 | 1,354 entailed (60%), 488 partially (22%), 399 not entailed (18%) |
-
-**Failure rate**: 11 API errors out of 4,267 judgments (0.3%).
 
 ## Adding your own few-shot prompts
 
-The judge ships with few-shot examples tuned for FSSAI food safety regulations.
-When running on a **different food item** or domain, you should replace the
-few-shot examples in `src/validation/judge_prompts.py` with examples from your
-own data.  Each branch has its own set of examples:
+The judge ships with few-shot examples tuned for FSSAI food-safety regulations.
+For a different food item or domain, replace the examples in
+`src/validation/LLM_judge/judge_prompts.py`. Each branch has a dedicated
+prompt-builder function:
 
-| Branch | Prompt variable | Location in `judge_prompts.py` |
+| Branch | Function | Prompt location |
 |---|---|---|
-| zero_triplet | `ZERO_TRIPLET_SYSTEM` | Look for `=== FEW-SHOT EXAMPLES ===` block |
-| schema_mismatch | `_SCHEMA_MISMATCH_SYSTEM` | Look for `=== FEW-SHOT EXAMPLES ===` block |
-| schema_invalid | `_SCHEMA_INVALID_SYSTEM` | Look for `=== FEW-SHOT EXAMPLES ===` block |
-| schema_valid | `_SCHEMA_VALID_SYSTEM` | Look for `=== FEW-SHOT EXAMPLES ===` block |
+| zero_triplet | `zero_triplet_system()` | `=== FEW-SHOT EXAMPLES ===` block |
+| schema_mismatch | `schema_mismatch_system()` | `=== FEW-SHOT EXAMPLES ===` block |
+| schema_invalid | `schema_invalid_system()` | `=== FEW-SHOT EXAMPLES ===` block |
+| schema_valid | `schema_valid_system()` | `=== FEW-SHOT EXAMPLES ===` block |
 
-### Why this matters
+Few-shot examples teach the judge what your domain looks like (e.g. "Paneer →
+belongsToCategory → UnripenedCheese"). Without domain-specific examples the
+judge may mislabel domain relations as unsupported and produce less calibrated
+confidence scores. Pick 2–3 real examples per branch from a manual audit of
+your data.
 
-Few-shot examples teach the judge what your domain looks like.  An example
-showing "Paneer → belongsToCategory → UnripenedCheese" helps the judge
-understand FSSAI taxonomy.  If you switch to a different food item (e.g., milk
-adulteration, spice contamination), your examples should reflect the entity
-types, relations, and text patterns specific to that domain.
+---
 
-Without domain-specific examples, the judge may:
-- Mislabel domain-specific relations as unsupported
-- Fail to recognize legitimate domain entities
-- Produce less calibrated confidence scores
+# 2. NLI Cross-Encoder (`NLI_model/`)
 
-### How to add examples
+A `sentence-transformers` cross-encoder classifies each triplet's verbalisation
+against its source text as `entailment` / `contradiction` / `neutral`. The
+fine-tuned checkpoint lives at `model_checkpoints/run4_deberta_v3_small`.
 
-Each few-shot block follows this format:
+| Module | Purpose |
+|---|---|
+| `nli_model.py` | `NLIModel` wrapper (single/multi-GPU, CPU) with a label→verdict map |
+| `verbalise.py` | Relation/entity-type → natural-language hypothesis templates |
+| `synthetic_ids.py` | Assigns IDs + descriptive labels to structural/synthetic nodes |
+| `nli_pipeline.py` | End-to-end inference: convert Excel, or run pretrained/fine-tuned |
+| `nli_finetune.py` | Fine-tune the cross-encoder (single/multi-GPU/distributed) |
+| `nli_eval.py` | Evaluate one or more models on a labelled CSV |
 
+## Fine-tuning
+
+```bash
+food_lab/bin/python src/validation/NLI_model/nli_finetune.py \
+    --train-csv    src/validation/Golden_val/nli_train_pairs.csv \
+    --base-model   cross-encoder/nli-deberta-v3-small \
+    --output-dir   model_checkpoints/run4_deberta_v3_small \
+    --epochs       5 --batch-size 16 --device cuda:0
 ```
---- EXAMPLE N ---
-CHUNK: <short excerpt from your actual data>
-TRIPLET: <an actual triplet from your extraction>
-VERDICT: <what the correct verdict should be>
-CONFIDENCE: <how certain you are>
-RATIONALE: <why this verdict is correct>
+
+Splits by unique `snippet_id` (stratified by predicate, or
+`--split-mode predicate_disjoint` for a cross-relation generalisation test) and
+filters cross-premise leakage.
+
+## Inference
+
+```bash
+# pretrained
+food_lab/bin/python src/validation/NLI_model/nli_pipeline.py \
+    --mode pretrained \
+    --nli-model cross-encoder/nli-deberta-v3-small \
+    --triplets-path src/outputs/triplets/triplets.csv \
+    --chunks-csv src/data/FSSAI_docs/processed/chunks.csv \
+    --output-dir src/outputs/nli_validation \
+    --device cuda:0
+
+# fine-tuned
+food_lab/bin/python src/validation/NLI_model/nli_pipeline.py \
+    --mode finetuned \
+    --nli-model model_checkpoints/run4_deberta_v3_small \
+    --triplets-path src/outputs/triplets/triplets.csv \
+    --chunks-csv src/data/FSSAI_docs/processed/chunks.csv \
+    --output-dir src/outputs/nli_validation \
+    --device cuda:0
 ```
 
-Pick 2-3 real examples per branch from a manual audit of your data.  Each
-example should be concise (short chunk text, 1-2 triplet fields) and represent
-the verdict you want to teach.
+## Evaluation
 
-After updating the prompts, re-run the judge — the new examples will be used
-for every judgment in that run.
+```bash
+python3 src/validation/NLI_model/nli_eval.py \
+    --models cross-encoder/nli-deberta-v3-small,model_checkpoints/run4_deberta_v3_small \
+    --labels pretrained,finetuned \
+    --eval-csv src/validation/Golden_val/nli_train_pairs.csv \
+    --device cuda:0
+```
+
+Writes per-example predictions, per-model metrics, a comparison table, and
+(≥2 models) a `disagreements.csv`.
+
+---
+
+# 3. Two-Stage NLI + LLM Judge (`nli_llm_judge.py`)
+
+For every triplet in the **unconstrained** extraction output:
+
+1. Chunk-level NLI (premise = full `evidence_text`)
+2. Span-level NLI (premise = `evidence_span`)
+3. Local Qwen LLM judge with both NLI scores
+4. Agreement status: `agreed_all` / `agreed_partial` / `contested` — contested
+   rows are flagged for human review, with the LLM judge taking precedence in
+   the final verdict.
+
+```bash
+python3 src/validation/nli_llm_judge.py \
+    --triplets-dir src/outputs/unconstrained \
+    --chunks-csv   src/data/FSSAI_docs/processed/chunks.csv \
+    --nli-model    model_checkpoints/run4_deberta_v3_small \
+    --base-url     http://localhost:8030/v1 \
+    --model        Qwen/Qwen3.5-27B-FP8 \
+    --api-key      aashray-fflo-local \
+    --output-dir   src/outputs/unconstrained \
+    --device       cuda:0
+```
+
+Outputs: `nli_llm_judge_results.csv` (full), `nli_llm_judge_contested.csv`
+(human review), `nli_llm_judge_entailed.csv` (accepted), and a summary JSON.
+Optional `--canonicalise` also runs LLM canonicalisation on the entailed+agreed
+triplets.
+
+---
+
+# 4. Unconstrained Canonicalisation (`unconstrained/`)
+
+Supports the open-domain extraction workflow:
+
+| Module | Purpose |
+|---|---|
+| `llm_canonicalise.py` | Grounded, LLM-driven canonicalisation of free-form relation names (verify-then-name, with antonym guard) |
+| `apply_canonical.py` | Apply a `canonical_map.json` to resolve predicate/subject_type/object_type in a triplet CSV |
+
+```bash
+python3 src/validation/unconstrained/llm_canonicalise.py \
+    --report-json  src/outputs/unconstrained/unconstrained_report.json \
+    --triplets-csv src/outputs/unconstrained/nli_llm_judge_entailed.csv \
+    --base-url     http://localhost:8030/v1 \
+    --model        Qwen/Qwen3.5-27B-FP8 \
+    --output       canonical_map.json
+
+python3 src/validation/unconstrained/apply_canonical.py \
+    --input  nli_llm_judge_entailed.csv \
+    --map    canonical_map.json \
+    --output entailed_canonicalised.csv
+```
 
 ## Requirements
 
 ```bash
 pip install httpx
+# NLI components additionally:
+pip install sentence-transformers
+# unconstrained/llm_canonicalise.py additionally:
+pip install pandas
 ```

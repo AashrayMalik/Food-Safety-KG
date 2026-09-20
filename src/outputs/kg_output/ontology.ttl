@@ -29,10 +29,10 @@ prov:wasAttributedTo a owl:ObjectProperty ;
     rdfs:range fflo:FoodBusinessOperator .
 
 prov:wasGeneratedBy a owl:ObjectProperty ;
-    fflo:hasSignature [ fflo:signatureDomain fflo:SpreadEvent ;
-            fflo:signatureRange fflo:TransformationEvent ],
-        [ fflo:signatureDomain fflo:Adulterant ;
-            fflo:signatureRange fflo:AdulterationAct ] .
+    fflo:hasSignature [ fflo:signatureDomain fflo:Adulterant ;
+            fflo:signatureRange fflo:AdulterationAct ],
+        [ fflo:signatureDomain fflo:SpreadEvent ;
+            fflo:signatureRange fflo:TransformationEvent ] .
 
 prov:wasInfluencedBy a owl:ObjectProperty ;
     rdfs:domain fflo:SpreadEvent ;

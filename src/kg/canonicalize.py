@@ -1,15 +1,4 @@
-"""Assign canonical entity IDs to extracted triplet rows.
-
-Groups surface-form variants of the same real-world entity (blocked by
-type) using exact normalised matches plus char n-gram similarity, with
-guards against false merges (conflicting numeric values, leading
-qualifiers, and similarity-prone measurement types). Also passes through
-existing event-reification IDs and applies a cross-type exact-match merge
-for extraction-time type-labeling inconsistency. Writes a canonicalised
-CSV plus audit files for borderline and cross-type merges.
-"""
-
-import csv, re, sys
+import csv, hashlib, re, sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -19,11 +8,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 SRC = Path(__file__).resolve().parents[1]
 
-IN_PATH = SRC / "outputs" / "triplets" / "triplets.csv"
-OUT_CSV = SRC / "outputs" / "triplets" / "triplets_canonicalized.csv"
-AUDIT_CSV = SRC / "outputs" / "triplets" / "canonicalization_audit.csv"
-BORDERLINE_CSV = SRC / "outputs" / "triplets" / "canonicalization_borderline_review.csv"
-CROSS_TYPE_AUDIT_CSV = SRC / "outputs" / "triplets" / "canonicalization_cross_type_merges.csv"
+IN_PATH = SRC / "outputs" / "triplets" / "qwen" / "triplets_verified.csv"
+OUT_CSV = SRC / "outputs" / "triplets" / "qwen" / "triplets_verified_canonicalized.csv"
+AUDIT_CSV = SRC / "outputs" / "triplets" / "qwen" / "canonicalization_audit.csv"
+BORDERLINE_CSV = SRC / "outputs" / "triplets" / "qwen" / "canonicalization_borderline_review.csv"
+CROSS_TYPE_AUDIT_CSV = SRC / "outputs" / "triplets" / "qwen" / "canonicalization_cross_type_merges.csv"
 
 SIM_THRESHOLD_AUTO = 1.01   # effectively disabled: nothing merges on similarity alone anymore.
                              # Manual review found false merges the similarity signal could not
@@ -78,6 +67,10 @@ def type_prefix(t):
     letters = re.sub(r"[^A-Za-z]", "", local).upper()
     return letters[:3] if letters else "GEN"
 
+
+def short_hash(value, length=8):
+    return hashlib.sha1(value.encode("utf-8")).hexdigest()[:length]
+
 def main():
     with open(IN_PATH) as f:
         reader = csv.DictReader(f)
@@ -109,16 +102,17 @@ def main():
     entity_index = defaultdict(lambda: {"variants": defaultdict(list)})
     # entity_index[type] = {"variants": {normalized_str: [(row_idx, role, original_str), ...]}}
 
-    event_id_rows = defaultdict(list)  # (typ, raw) -> [(row_idx, role, raw), ...] for existing ev_* ids
+    event_id_rows = defaultdict(list)  # (typ, raw, snippet_id) -> [(row_idx, role, raw), ...] for existing ev_* ids
 
     for i, row in enumerate(rows):
+        sid = row.get("snippet_id", "").strip()
         for role, val_col, type_col in [("subject", "subject", "subject_type"), ("object", "object", "object_type")]:
             raw = row[val_col]
             typ = row[type_col]
             if not raw or not raw.strip():
                 continue
             if is_event_id(raw):
-                event_id_rows[(typ, raw.strip())].append((i, role, raw))
+                event_id_rows[(typ, raw.strip(), sid)].append((i, role, raw))
                 continue
             norm = normalize(raw)
             entity_index[typ]["variants"][norm].append((i, role, raw))
@@ -227,12 +221,24 @@ def main():
             for ms in member_strings:
                 canon_id_of[(typ, ms)] = cid
 
-    # Event-reification IDs pass through untouched -- each is already a unique event instance,
-    # never merged with siblings that share a prefix.
+    # Event-reification IDs pass through untouched per (event id, snippet), but
+    # the same ev_* name reused across chunks is a distinct event, so it gets a
+    # chunk discriminator to keep it from collapsing into a single node.
     event_canon_id_of = {}
-    for (typ, raw), refs in event_id_rows.items():
-        cid = f"fkg:{raw}"
-        event_canon_id_of[(typ, raw)] = cid
+    event_snippet_groups = defaultdict(set)
+    for (typ, raw, sid), refs in event_id_rows.items():
+        event_snippet_groups[(typ, raw)].add(sid)
+
+    event_collisions = sum(
+        1 for (typ, raw), sids in event_snippet_groups.items() if len(sids) > 1
+    )
+
+    for (typ, raw, sid), refs in event_id_rows.items():
+        if len(event_snippet_groups[(typ, raw)]) == 1:
+            cid = f"fkg:{raw}"
+        else:
+            cid = f"fkg:{raw}~{short_hash(sid)}"
+        event_canon_id_of[(typ, raw, sid)] = cid
         cluster_records.append({
             "canonical_id": cid,
             "type": typ,
@@ -309,7 +315,8 @@ def main():
                                    # exist or the summary print below raises KeyError
                 continue
             if is_event_id(raw):
-                row[id_col] = event_canon_id_of.get((typ, raw.strip()), "")
+                row[id_col] = event_canon_id_of.get(
+                    (typ, raw.strip(), row.get("snippet_id", "").strip()), "")
             else:
                 norm = normalize(raw)
                 row[id_col] = canon_id_of.get((typ, norm), "")
@@ -345,6 +352,7 @@ def main():
     print(f"Cross-type exact-match merges applied: {len(cross_type_audit)}")
     print(f"Final unique IDs after cross-type merge: {len(set(ct_final_id_of.values()))}")
     print(f"Borderline pairs flagged for manual/LLM review: {len(borderline_records)}")
+    print(f"Event IDs colliding across chunks (disambiguated): {event_collisions}")
     print(f"Rows with {subject_target} filled: {sum(1 for r in rows if r[subject_target])}")
     print(f"Rows with {object_target} filled: {sum(1 for r in rows if r[object_target])}")
 

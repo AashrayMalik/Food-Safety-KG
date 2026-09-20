@@ -57,8 +57,9 @@ Stage → implementation:
 
 ## Ontology & schema
 
-Triplets are typed against the **FFLO v7** ontology — 92 entity types and 67
-relations across five lifecycle stages:
+Triplets are typed against the **FFLO v7** ontology — 89 entity types (87
+classes plus `xsd:string` / `xsd:decimal`) and 72 relations across five
+lifecycle stages:
 
 | Stage | Scope | Example relations |
 |---|---|---|
@@ -119,7 +120,7 @@ Optional runtime deps (all pulled in by `requirements.txt`):
 
 - **NLI validation**: `sentence-transformers` (+ `torch`, `transformers`) — the
   fine-tuned cross-encoder at `model_checkpoints/run4_deberta_v3_small`
-  (84.4% accuracy on the FFLO validation set).
+  (F1-macro 0.843 on the FFLO validation set).
 - **KG serialisation**: `rdflib`.
 - **Web scraping**: `selenium` + a Chrome driver.
 

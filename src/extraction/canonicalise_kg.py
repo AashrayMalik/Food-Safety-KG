@@ -11,8 +11,8 @@ Outputs: canonical CSV, entity map, type conflicts, report.
 Usage::
 
     food_lab/bin/python src/extraction/canonicalise_kg.py \\
-        --input  src/outputs/triplets/triplets.csv \\
-        --output-dir src/outputs/triplets/
+        --input  src/outputs/triplets/qwen/triplets_verified.csv \\
+        --output-dir src/outputs/triplets/qwen/
 """
 
 from __future__ import annotations
@@ -89,6 +89,31 @@ def _normalize(text: str) -> str:
     t = re.sub(r"[,\-—\s]+", " ", t)
     t = re.sub(r"\s+", " ", t)
     return t
+
+
+_EVENT_ID_RE = re.compile(r"^ev_[a-z0-9_]+_\d+$")
+
+
+def _source_number(source_id: str) -> str:
+    m = re.search(r"(\d+)$", source_id or "")
+    return m.group(1) if m else "0"
+
+
+def _qualify_event_ids(row: dict[str, str]) -> None:
+    """Make synthetic ev_* event IDs globally unique.
+
+    The extractor reuses the same ``ev_*`` name across chunks (and sources) for
+    distinct events, so the raw name alone is not a unique identifier. Qualify
+    it with its source and chunk so each event resolves to its own node; the
+    suffix keeps the ``ev_[...]_\d+`` shape so downstream event handling still
+    recognises it.
+    """
+    source = _source_number(row.get("source_id", ""))
+    chunk = (row.get("chunk_index", "") or "0").strip()
+    for role in ("subject", "object"):
+        val = (row.get(role, "") or "").strip()
+        if _EVENT_ID_RE.match(val):
+            row[role] = f"{val}_{source}_{chunk}"
 
 
 def _related_types(t1: str, t2: str) -> bool:
@@ -191,7 +216,8 @@ def canonicalise_entities(
     # Merge map: norm_name → canonical_id
     merge: dict[str, str] = {}
     stats = {"exact_matches": 0, "fuzzy_matches": 0, "singletons_merged": 0,
-             "chemical_blocked": 0, "neighbor_blocked": 0, "total_merged": 0}
+             "chemical_blocked": 0, "neighbor_blocked": 0, "event_blocked": 0,
+             "total_merged": 0}
 
     for block in blocks.values():
         for i, a in enumerate(block):
@@ -207,6 +233,12 @@ def canonicalise_entities(
                 if na == 0.0:
                     merge[b] = a
                     stats["exact_matches"] += 1
+                    continue
+
+                # Event-ID guard: synthetic ev_* identifiers are never
+                # fuzzy-merged, or distinct events collapse into one node.
+                if _EVENT_ID_RE.match(a) or _EVENT_ID_RE.match(b):
+                    stats["event_blocked"] += 1
                     continue
 
                 # Chemical-type guard
@@ -265,7 +297,8 @@ def canonicalise_entities(
           f"{stats['singletons_merged']} singleton) "
           f"({stats['elapsed_s']}s)", flush=True)
     print(f"  Blocked: {stats['chemical_blocked']} chemical, "
-          f"{stats['neighbor_blocked']} neighbor", flush=True)
+          f"{stats['neighbor_blocked']} neighbor, "
+          f"{stats['event_blocked']} event", flush=True)
 
     return final_map, stats
 
@@ -473,7 +506,9 @@ def dedup_triples(
                     sids.append(sid)
             best["evidence_span"] = " | ".join(spans[:5])
             if sids:
-                best["snippet_id"] = sids[0] if len(sids) == 1 else f"{sids[0]} (+{len(sids)-1})"
+                best["snippet_id"] = sids[0]
+                if len(sids) > 1:
+                    best["alt_snippet_ids"] = ";".join(sids[1:])
             deduped_exact.append(best)
 
     dropped_exact = len(rows) - len(deduped_exact)
@@ -519,7 +554,9 @@ def dedup_triples(
 
         best["evidence_span"] = " | ".join(spans_deduped[:5])
         if sids:
-            best["snippet_id"] = sids[0] if len(sids) == 1 else f"{sids[0]} (+{len(sids)-1})"
+            best["snippet_id"] = sids[0]
+            if len(sids) > 1:
+                best["alt_snippet_ids"] = ";".join(sids[1:])
 
         deduped.append(best)
 
@@ -550,14 +587,23 @@ def run(
     # Load
     print(f"Loading {input_csv} ...", flush=True)
     rows: list[dict[str, str]] = []
+    dropped_meta = 0
     with input_csv.open("r", encoding="utf-8", newline="") as fh:
         for r in csv.DictReader(fh):
+            _qualify_event_ids(r)
             r["_norm_subject"] = _normalize(r.get("subject", ""))
             r["_norm_object"] = _normalize(r.get("object", ""))
             if not r["_norm_subject"] and not r["_norm_object"]:
                 continue
+            # Drop malformed rows with no source metadata (corrupted/empty
+            # chunks whose snippet_id was truncated to e.g. "src_pdf_0234").
+            if not (r.get("source_id") or "").strip():
+                dropped_meta += 1
+                continue
             rows.append(r)
     print(f"  {len(rows)} rows loaded", flush=True)
+    if dropped_meta:
+        print(f"  dropped {dropped_meta} rows with empty source_id", flush=True)
 
     # Phase 1
     entity_map, p1_stats = canonicalise_entities(rows)
@@ -576,7 +622,7 @@ def run(
         "snippet_id", "source_id", "source_file", "source_type",
         "chunk_index", "subject", "subject_type", "subject_id",
         "predicate", "object", "object_type", "object_id",
-        "confidence", "evidence_span", "_type_fix",
+        "confidence", "evidence_span", "alt_snippet_ids", "_type_fix",
     ]
     with csv_path.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames,

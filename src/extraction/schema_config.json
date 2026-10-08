@@ -82,13 +82,28 @@
     "fflo:PenaltyReduction",
     "fflo:Authorization",
     "fflo:Sealing",
+    "fflo:Inspection",
+    "fflo:Notice",
+    "fflo:ProhibitionOrder",
+    "fflo:Closure",
+    "fflo:LicenceSuspension",
+    "fflo:LicenceCancellation",
+    "fflo:MonetaryPenalty",
+    "fflo:Prosecution",
+    "fflo:Arrest",
+    "fflo:Destruction",
+    "fflo:ProductRecall",
+    "fflo:Blacklisting",
+    "fflo:Investigation",
+    "fflo:Advisory",
     "fflo:HealthEffect",
     "fflo:CausalHealthEffect",
     "fflo:AcuteEffect",
     "fflo:ChronicEffect",
     "fflo:VulnerablePopulation",
     "xsd:string",
-    "xsd:decimal"
+    "xsd:decimal",
+    "xsd:date"
   ],
   "relations": [
     "prov:wasAssociatedWith",
@@ -162,7 +177,14 @@
     "fflo:hasScientificName",
     "fflo:governsSampling",
     "fflo:isEmpoweredTo",
-    "fflo:actsOnBehalfOf"
+    "fflo:actsOnBehalfOf",
+    "fflo:hasActionType",
+    "fflo:takenAgainst",
+    "fflo:hasPenaltyAmount",
+    "fflo:actionDate",
+    "fflo:reportedDate",
+    "fflo:testsFor",
+    "fflo:testsInFood"
   ],
   "domain_range": {
     "prov:wasAssociatedWith": [
@@ -824,7 +846,8 @@
       {
         "domain": [
           "fflo:FoodBusinessOperator",
-          "fkg:Food"
+          "fkg:Food",
+          "fso:Laboratory"
         ],
         "range": [
           "fflo:FoodStandard",
@@ -1039,7 +1062,8 @@
     "fflo:isEmpoweredTo": [
       {
         "domain": [
-          "fflo:RegulatoryBody"
+          "fflo:RegulatoryBody",
+          "fflo:RegulatoryOfficer"
         ],
         "range": [
           "fflo:RegulatoryActionType",
@@ -1047,7 +1071,21 @@
           "fflo:Removal",
           "fflo:PenaltyReduction",
           "fflo:Authorization",
-          "fflo:Sealing"
+          "fflo:Sealing",
+          "fflo:Inspection",
+          "fflo:Notice",
+          "fflo:ProhibitionOrder",
+          "fflo:Closure",
+          "fflo:LicenceSuspension",
+          "fflo:LicenceCancellation",
+          "fflo:MonetaryPenalty",
+          "fflo:Prosecution",
+          "fflo:Arrest",
+          "fflo:Destruction",
+          "fflo:ProductRecall",
+          "fflo:Blacklisting",
+          "fflo:Investigation",
+          "fflo:Advisory"
         ]
       }
     ],
@@ -1058,6 +1096,112 @@
         ],
         "range": [
           "fflo:RegulatoryBody"
+        ]
+      }
+    ],
+    "fflo:testsFor": [
+      {
+        "domain": [
+          "fso:Laboratory"
+        ],
+        "range": [
+          "ssn:Property",
+          "fflo:Adulterant",
+          "fflo:SyntheticAdulterant",
+          "fflo:NaturalAdulterant",
+          "fflo:ContaminantAdulterant",
+          "fflo:Microorganism"
+        ]
+      }
+    ],
+    "fflo:testsInFood": [
+      {
+        "domain": [
+          "fso:Laboratory"
+        ],
+        "range": [
+          "fkg:Food"
+        ]
+      }
+    ],
+    "fflo:hasActionType": [
+      {
+        "domain": [
+          "fflo:RegulatoryAction"
+        ],
+        "range": [
+          "fflo:RegulatoryActionType",
+          "fflo:Seizure",
+          "fflo:Removal",
+          "fflo:PenaltyReduction",
+          "fflo:Authorization",
+          "fflo:Sealing",
+          "fflo:Inspection",
+          "fflo:Notice",
+          "fflo:ProhibitionOrder",
+          "fflo:Closure",
+          "fflo:LicenceSuspension",
+          "fflo:LicenceCancellation",
+          "fflo:MonetaryPenalty",
+          "fflo:Prosecution",
+          "fflo:Arrest",
+          "fflo:Destruction",
+          "fflo:ProductRecall",
+          "fflo:Blacklisting",
+          "fflo:Investigation",
+          "fflo:Advisory"
+        ]
+      }
+    ],
+    "fflo:takenAgainst": [
+      {
+        "domain": [
+          "fflo:RegulatoryAction"
+        ],
+        "range": [
+          "fflo:FoodBusinessOperator"
+        ]
+      }
+    ],
+    "fflo:hasPenaltyAmount": [
+      {
+        "domain": [
+          "fflo:RegulatoryAction"
+        ],
+        "range": [
+          "xsd:decimal"
+        ]
+      }
+    ],
+    "fflo:actionDate": [
+      {
+        "domain": [
+          "fflo:RegulatoryAction",
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered",
+          "fflo:AdulterationAct"
+        ],
+        "range": [
+          "xsd:date"
+        ]
+      }
+    ],
+    "fflo:reportedDate": [
+      {
+        "domain": [
+          "fflo:RegulatoryAction",
+          "fflo:IncidentFinding",
+          "fflo:LabConfirmed",
+          "fflo:FieldDetected",
+          "fflo:SurveyAggregated",
+          "fflo:RecallTriggered",
+          "fflo:AdulterationAct"
+        ],
+        "range": [
+          "xsd:date"
         ]
       }
     ]
@@ -1107,6 +1251,20 @@
     "fflo:TestingRequirement": "fflo:ObligationType",
     "fflo:ConformanceRequirement": "fflo:ObligationType",
     "fflo:ProductionRequirement": "fflo:ObligationType",
-    "fflo:ProcessingAid": "fflo:FoodAdditive"
+    "fflo:ProcessingAid": "fflo:FoodAdditive",
+    "fflo:Inspection": "fflo:RegulatoryActionType",
+    "fflo:Notice": "fflo:RegulatoryActionType",
+    "fflo:ProhibitionOrder": "fflo:RegulatoryActionType",
+    "fflo:Closure": "fflo:RegulatoryActionType",
+    "fflo:LicenceSuspension": "fflo:RegulatoryActionType",
+    "fflo:LicenceCancellation": "fflo:RegulatoryActionType",
+    "fflo:MonetaryPenalty": "fflo:RegulatoryActionType",
+    "fflo:Prosecution": "fflo:RegulatoryActionType",
+    "fflo:Arrest": "fflo:RegulatoryActionType",
+    "fflo:Destruction": "fflo:RegulatoryActionType",
+    "fflo:ProductRecall": "fflo:RegulatoryActionType",
+    "fflo:Blacklisting": "fflo:RegulatoryActionType",
+    "fflo:Investigation": "fflo:RegulatoryActionType",
+    "fflo:Advisory": "fflo:RegulatoryActionType"
   }
 }
